@@ -418,7 +418,7 @@ public void Event_PlayerDeath(Event hEvent, const char[] sEventName, bool bDontB
 					}
 				}*/
 				
-				CPrintToChatAll("{green}★ {olive}%N {default} 和团队空爆了 {olive}%N {default}({blue}%d {default}枪 {blue}%d {default}伤害 ). {olive}%s 助攻", \
+				CPrintToChatAll("{green}★ {olive}%N {default} 和团队空爆了 {olive}%N {default}({blue}%d {default}枪 {blue}%d {default}伤害 ). 助攻: {olive}%s", \
 															attacker, victim, shots, damage, assister_string);
 			} else {
 				/*CPrintToChat(victim, "{green}★ {default}You were skeeted by {olive}%N {default}in {blue}%d shot%c", attacker, shots, plural);
@@ -486,7 +486,7 @@ public Action Timer_BoomerKilledCheck(Handle hTimer)
 				Format(sRank, sizeof(sRank), "★");
 			}
 			
-			CPrintToChatAll("{green}%s {olive}%N {blue}瞬杀了 {default}在 {blue}%0.1f 秒前生成的{olive}%s [%s]Boomer ", sRank, g_iBoomerKiller, BoomerKillTime, Boomer);
+			CPrintToChatAll("{green}%s {olive}%N {blue}瞬杀了 {default}在 {blue}%0.1f 秒前生成的{olive}Boomer[%s]", sRank, g_iBoomerKiller, BoomerKillTime, Boomer);
 		}
 	}
 	////

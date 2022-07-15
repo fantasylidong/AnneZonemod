@@ -61,9 +61,6 @@ public int Native_GetSmokerStatus(Handle plugin, int numParams)
 	{
 		return ThrowNativeError(SP_ERROR_NATIVE, "Client %d is not connected", client);
 	}
-	if(IsFakeClient(client)){
-		return ThrowNativeError(SP_ERROR_NATIVE, "Client %d is A bot", client);
-	}
 	
 	return bCanSmoker[client];
 }
