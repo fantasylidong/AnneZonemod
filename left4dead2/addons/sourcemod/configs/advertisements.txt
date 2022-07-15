@@ -1,0 +1,68 @@
+"Advertisements"
+{
+	"1"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}[本章节地图]: {GREEN}{CURRENTMAP} \n{LIGHTGREEN}[服务器时间]: {GREEN}{TIME24} - {DATE}"
+	}
+	"2"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}!away闲置 !join加入 !slots开位 !xx模式查询 !mapvote三方图 !spechudon 打开旁观hud"
+	}
+	"3"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}!chr !pum{LIGHTGREEN}快速买喷,!smg !uzi快速买机枪,!pill快速买药"
+	}
+	"4"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}血量低于40时要考虑跳楼表演了 因为会拖慢队伍推进速度哦"
+	}
+	"5"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}!zs自杀 !tank查看boss !rpg购物商店 !xx模式查询"
+	}
+	"6"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}本组服务器都有数据库商店系统，打不过可以输入!buy或!rpg进行氪金"
+	}
+	"7"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}服务器提供Anne版本选择，地图Stripper选择，推限制模式更改"
+	}
+	"8"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}称号、帽子和生还者轮廓系统已在商店系统上线，50W积分自定义称号可以使用!setch进行设置和修改"
+	}
+	"9"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}如果某个进度的克不想打，生还者可以使用命令!voteboss 修改Tank和Witch进度"
+	}
+	"10"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}本服OP 东，欢迎加入组服务器qq群：484690502 寻找小伙伴一起开黑"
+	}
+	"11"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}输入!dance跳跳舞解解压，如果跳舞人物没动作，请steam联机选项打开允许全部服务器内容后重新进入服务器"
+	}
+	"12"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}多人运动过关后如果bot数量不对，重新投票或者输入!setbot设置bot数量"
+	}
+	"13"
+	{
+		"type"		"S"
+		"text"		"{LIGHTGREEN}服务器Mod开关可以在投票菜单中开启"
+	}
+}
