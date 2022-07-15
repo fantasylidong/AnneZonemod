@@ -1,0 +1,76 @@
+  {
+    "log": {
+        "loglevel": "info"
+    },
+    "inbounds": [
+        {
+            "port": 8388,
+            "protocol": "trojan",
+            "settings": {
+                "clients": [
+                    {
+                        "password":"anne123",  // 密码
+                        "flow": "xtls-rprx-direct"
+                    }
+                ],
+                "fallbacks": [
+                    {
+                        "dest": "/dev/shm/default.sock",
+                        "xver": 1
+                    },
+                    {
+                        "alpn": "h2",
+                        "dest": "/dev/shm/h2c.sock",
+                        "xver": 1
+                    }
+                ]
+            },
+            "streamSettings": {
+                "network": "tcp",
+                "security": "xtls",
+                "xtlsSettings": {
+                    "alpn": [
+                        "http/1.1",
+                        "h2"
+                    ],
+                    "certificates": [
+                        {
+                            "certificateFile": "/key/cert4.pem",  // 证书文件绝对目录
+                            "keyFile": "/key/privkey4.pem",  // 密钥文件绝对目录
+                            "ocspStapling": 3600  // 验证周期 3600 秒
+                        }
+                    ],
+                    "minVersion": "1.2"  // 如果是ecc证书则最低使用 TLSv1.2 ，如果你不清楚证书类型或者不是 ecc 证书，删掉这行
+                }
+            }
+        }
+    ],
+	"routing": {
+		"domainStrategy": "AsIs",
+		"rules": [
+			{ 
+				"type": "field",
+				"ip": ["10.0.0.32/27", "124.230.192.0/24"],
+				"port": "2330-2360",
+				"outboundTag": "direct" 
+			},
+			{ 
+				"type": "field",
+				"ip": ["10.0.0.0/24"],
+				"outboundTag": "block" 
+			}
+		],
+		"balancers": []
+    },
+    "outbounds": [
+		{
+		  "tag": "direct",
+		  "protocol": "freedom"
+		},
+		// 5.2 屏蔽规则，blackhole 协议就是把流量导入到黑洞里（屏蔽）
+		{
+		  "tag": "block",
+		  "protocol": "blackhole"
+		}
+    ]
+}
