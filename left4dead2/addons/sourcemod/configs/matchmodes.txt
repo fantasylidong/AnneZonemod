@@ -1,0 +1,38 @@
+"MatchModes"
+{
+	"AnneHappy药役"
+	{
+		"AnneHappy"
+		{
+			"name" "AnneHappy药役"
+		}
+	}
+	"1vHunters模式"
+	{
+		"Hunters"
+		{
+			"name" "1vHunters模式"
+		}
+	}
+	"单人装B模式"
+	{
+		"Alone"
+		{
+			"name" "单人装B模式"
+		}
+	}
+	"WitchParty模式"
+	{
+		"WitchParty"
+		{
+			"name" "WitchParty模式"
+		}
+	}
+	"牛牛大冲刺模式"
+	{
+		"AllCharger"
+		{
+			"name" "牛牛大冲刺模式"
+		}
+	}
+}
