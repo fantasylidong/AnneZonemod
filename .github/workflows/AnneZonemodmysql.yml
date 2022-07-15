@@ -1,0 +1,36 @@
+name: AnneZonemod Update Achieve Release
+
+on:
+  push:
+    branches:
+      - 'mysql'
+
+jobs:
+
+  release:
+    if: github.repository == 'fantasylidong/AnneZonemod'
+    name: Upload  AnneZonemod Achieve if a new commit was been push.
+    runs-on: [ubuntu-latest]
+    
+    steps:
+      - name: Checkout code
+        run: |
+          git clone -b nomysql https://github.com/fantasylidong/AnneZonemod.git
+      
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+      - name: Gzip
+        run: |
+          mkdir AnneZonemod-mysql-${{ steps.date.outputs.date }}
+          cp -R AnneZonemod/* AnneZonemod-mysql-${{ steps.date.outputs.date }}
+          tar -czvf  AnneZonemod-mysql-${{ steps.date.outputs.date }}.tar.gz AnneZonemod-mysql-${{ steps.date.outputs.date }}
+ 
+      - name: Update release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        with:
+          files: AnneZonemod-mysql-${{ steps.date.outputs.date }}.tar.gz
+          tag_name: AnneZonemod-mysql-release-${{ steps.date.outputs.date }}
