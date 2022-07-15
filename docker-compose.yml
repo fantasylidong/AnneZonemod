@@ -1,0 +1,14 @@
+version: 1.0
+services:
+  l4d2:
+    image: morzlee/anne
+    ports:
+    - "27015:27015"
+    - "27015:27015/udp"
+    environment:
+      - HOSTNAME=AnneServer
+      - REGION=255
+      - plugin=anne
+      - steamid=STEAM_1:1:121430603
+      - steamgroup=25622692,26419628
+      - password=123456
