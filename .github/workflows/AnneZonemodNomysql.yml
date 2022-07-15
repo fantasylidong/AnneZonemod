@@ -9,7 +9,7 @@ jobs:
 
   release:
     if: github.repository == 'fantasylidong/AnneZonemod'
-    name: Upload  AnneServer Achieve if a new commit was been push.
+    name: Upload  AnneZonemod Achieve if a new commit was been push.
     runs-on: [ubuntu-latest]
     
     steps:
@@ -30,7 +30,7 @@ jobs:
       - name: Update release
         uses: softprops/action-gh-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
         with:
           files: AnneZonemod-nomysql-${{ steps.date.outputs.date }}.tar.gz
           tag_name: AnneZonemod-nomysql-release-${{ steps.date.outputs.date }}
