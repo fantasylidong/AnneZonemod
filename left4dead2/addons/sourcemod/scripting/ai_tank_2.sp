@@ -106,7 +106,7 @@ public void OnPluginStart()
 	// 连跳相关
 	g_hAllowBhop = CreateConVar("ai_Tank_Bhop", "1", "是否开启坦克连跳", CVAR_FLAG, true, 0.0, true, 1.0);
 	g_hBhopSpeed = CreateConVar("ai_TankBhopSpeed", "60", "坦克连跳速度", CVAR_FLAG, true, 0.0);
-	g_hTankStopDistance = CreateConVar("ai_Tank_StopDistance", "130", "Tank在距离目标多远位置停下连跳", FCVAR_NOTIFY, true, 0.0);
+	g_hTankStopDistance = CreateConVar("ai_Tank_StopDistance", "140", "Tank在距离目标多远位置停下连跳", FCVAR_NOTIFY, true, 0.0);
 	// 消耗相关
 	g_hAllowConsume = CreateConVar("ai_TankConsume", "0", "是否开启坦克消耗", CVAR_FLAG, true, 0.0, true, 1.0);
 	g_hConsumeInfSub = CreateConVar("ai_TankConsumeInfSub", "1", "当前特感少于等于特感上限减去这个值的时，坦克可以消耗", CVAR_FLAG, true, 0.0);

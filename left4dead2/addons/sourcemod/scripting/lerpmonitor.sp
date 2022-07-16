@@ -283,9 +283,10 @@ void ProcessPlayerLerp(int client, bool load = false, bool team = false)
 				}
 			}
 			
-			CPrintToChatAllEx(client, "{default}<{olive}Lerp{default}> {teamcolor}%N {default}was moved to spectators for lerp {teamcolor}%.01f", client, newLerpTime * 1000);
+			CPrintToChatAllEx(client, "{default}<{olive}Lerp{default}> {teamcolor}%N {default}你因为你的lerp为 {teamcolor}%.01f 而被强行旁观", client, newLerpTime * 1000);
 			ChangeClientTeam(client, L4D_TEAM_SPECTATE);
-			CPrintToChatEx(client, client, "{default}<{olive}Lerp{default}> Illegal lerp value (min: {teamcolor}%.01f{default}, max: {teamcolor}%.01f{default})", cVarMinLerp.FloatValue * 1000, cVarMaxLerp.FloatValue * 1000);
+			CPrintToChatEx(client, client, "{default}<{olive}Lerp{default}> 服务器允许lerp范围 (最小: {teamcolor}%.01f{default}, 最大: {teamcolor}%.01f{default})", cVarMinLerp.FloatValue * 1000, cVarMaxLerp.FloatValue * 1000);
+			CPrintToChatEx(client, client, "{default}<{olive}Lerp{default}> 修改lerp值指令为cl_interp xx (其中: {teamcolor}xx{default}为你想要设为的{teamcolor}lerp值/1000{default})", cVarMinLerp.FloatValue * 1000, cVarMaxLerp.FloatValue * 1000);		
 		}
 		
 		// nothing else to do
@@ -317,12 +318,12 @@ void ProcessPlayerLerp(int client, bool load = false, bool team = false)
 		count++;
 		
 		int max = cVarAllowedLerpChanges.IntValue;
-		CPrintToChatAllEx(client, "{default}<{olive}Lerp{default}> {teamcolor}%N {default}@ {teamcolor}%.01f {default}<== {green}%.01f {default}[%s%d{default}/%d {olive}changes]", client, newLerpTime * 1000, currentLerpTime * 1000, ((count > max) ? "{teamcolor} ": ""), count, max);
+		CPrintToChatAllEx(client, "{default}<{olive}Lerp{default}> {teamcolor}%N {default}@ {teamcolor}%.01f {default}<== {green}%.01f {default}[%s%d{default}/%d {olive}修改机会]", client, newLerpTime * 1000, currentLerpTime * 1000, ((count > max) ? "{teamcolor} ": ""), count, max);
 	
 		if (cVarLerpChangeSpec.BoolValue && (count > max)) {
-			CPrintToChatAllEx(client, "{default}<{olive}Lerp{default}> {teamcolor}%N {default}was moved to spectators (illegal lerp change)!", client);
+			CPrintToChatAllEx(client, "{default}<{olive}Lerp{default}> {teamcolor}%N {default}被移到旁观者 (超出lerp值允许范围)!", client);
 			ChangeClientTeam(client, L4D_TEAM_SPECTATE);
-			CPrintToChatEx(client, client, "{default}<{olive}Lerp{default}> Illegal change of Lerp midgame! Change it back to {teamcolor}%.01f", currentLerpTime * 1000);
+			CPrintToChatEx(client, client, "{default}<{olive}Lerp{default}> 游戏过程中不允许设为超出lerp允许范围外的值! 请更改回 {teamcolor}%.01f", currentLerpTime * 1000);
 			// no lerp update
 			return;
 		}

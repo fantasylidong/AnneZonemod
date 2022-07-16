@@ -67,7 +67,7 @@ public void OnPluginStart()
 
 	g_hCvarDamagePerTick = CreateConVar("l4d2_spit_dmg", "-1.0", "Damage per tick the spit inflicts. -1 to skip damage adjustments");
 	g_hCvarAlternateDamagePerTwoTicks = CreateConVar("l4d2_spit_alternate_dmg", "-1.0", "Damage per alternate tick. -1 to disable");
-	g_hCvarMaxTicks = CreateConVar("l4d2_spit_max_ticks", "28", "Maximum number of acid damage ticks");
+	g_hCvarMaxTicks = CreateConVar("l4d2_spit_max_ticks", "30", "Maximum number of acid damage ticks");
 	g_hCvarGodframeTicks = CreateConVar("l4d2_spit_godframe_ticks", "4", "Number of initial godframed acid ticks");
 	
 	g_hCvarDamagePerTick.AddChangeHook(CvarsChanged);
