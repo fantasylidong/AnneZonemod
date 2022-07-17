@@ -252,20 +252,16 @@ public Action Timer_KickBot(Handle timer, int client)
 // *********************
 public void OnGameFrame()
 {
-	/*
 	// 根据情况动态调整 z_maxplayers_zombie 数值
 	if (g_iSiLimit > g_hMaxPlayerZombies.IntValue)
 	{
 		CreateTimer(0.1, MaxSpecialsSet);
 	}
-	*/
-	if (g_bIsLate && g_iSpawnMaxCount > 0 && g_iSiLimit+2 > iHunterLimit+iSmokerLimit+iBoomerLimit+iSpitterLimit+iJockeyLimit+iChargerLimit)
+	if (g_bIsLate && g_iSpawnMaxCount > 0 && g_iSiLimit > iHunterLimit+iSmokerLimit+iBoomerLimit+iSpitterLimit+iJockeyLimit+iChargerLimit)
 	{
 			if(g_bCanRun)
-				HasAnyCountFull();
-		//if (g_iSiLimit > HasAnyCountFull())
-		//{		
-			float fSpawnPos[3] = {0.0}, fSurvivorPos[3] = {0.0}, fDirection[3] = {0.0}, fEndPos[3] = {0.0}, fMins[3] = {0.0}, fMaxs[3] = {0.0}, dist;	
+				HasAnyCountFull();			
+			float fSpawnPos[3] = {0.0}, fSurvivorPos[3] = {0.0}, fDirection[3] = {0.0}, fEndPos[3] = {0.0}, fMins[3] = {0.0}, fMaxs[3] = {0.0},dist;	
 			if (IsValidSurvivor(g_iTargetSurvivor))
 			{
 				// 根据指定生还者坐标，拓展刷新范围
@@ -273,12 +269,12 @@ public void OnGameFrame()
 				g_fSpawnDistanceMax += 5.0;
 				if(g_fSpawnDistanceMax < 500.0)
 				{
-					dist = 900.0;
+					dist = 850.0;
 					fMaxs[2] = fSurvivorPos[2] + 500.0;
 				}
 				else
 				{
-					dist = 400.0 + g_fSpawnDistanceMax;
+					dist = 350.0 + g_fSpawnDistanceMax;
 					fMaxs[2] = fSurvivorPos[2] + g_fSpawnDistanceMax;
 				}
 				fMins[0] = fSurvivorPos[0] - g_fSpawnDistanceMax;
@@ -327,7 +323,7 @@ public void OnGameFrame()
 						}
 					}
 				}
-				if (count2<=20)
+				if (count2 <= 20)
 				{
 					//Debug_Print("生还者看不到");
 					// 生还数量为 4，循环 4 次，检测此位置到生还的距离是否小于 750 是则刷特，此处可以刷新 1 ~ g_iSiLimit 只特感，如果此处刷完，则上面的 SpawnSpecial 将不再刷特
@@ -335,12 +331,12 @@ public void OnGameFrame()
 					{
 						int index = g_iSurvivors[count];
 						if(!IsValidSurvivor(index))
-							continue;
-						if( IsValidSurvivor(index) && IsPlayerAlive(index) )
-						{
-							GetClientEyePosition(index, fSurvivorPos);
-							fSurvivorPos[2] -= 60.0;
-							/*
+							continue;					
+						GetClientEyePosition(index, fSurvivorPos);
+						fSurvivorPos[2] -= 60.0;
+						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0, false, false, false, 3);
+						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0, false, false, false, 2);
+													/*
 							//test output
 							PrintToConsoleAll("fSpawnPos:(%f,%f,%f), fSurvivorPos:(%f,%f,%f)", fSpawnPos[0], fSpawnPos[1], fSpawnPos[2], fSurvivorPos[0], fSurvivorPos[1], fSurvivorPos[2]);
 							PrintToConsoleAll("VS#1:%d VS#2:%d VS#3:%d VS#4:%d sdkcalls#1:%d sdkcalls#2:%d", L4D2_VScriptWrapper_NavAreaBuildPath(fSpawnPos, fSurvivorPos, dist, false, false, TEAM_INFECTED, false), \
@@ -352,42 +348,36 @@ public void OnGameFrame()
 
 							
 							*/
-							//Original usage
-							Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0);
-							Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0);
-							//PlayerVisibleTo已经检测过最近距离了，这里不需要再次检查
-							if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false))
+						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin)
+						{
+							int iZombieClass = IsBotTypeNeeded();
+							if (iZombieClass > 0&&g_iSpawnMaxCount > 0)
 							{
-								int iZombieClass = IsBotTypeNeeded();
-								if (iZombieClass > 0&&g_iSpawnMaxCount > 0)
+								int entityindex = L4D2_SpawnSpecial(iZombieClass, fSpawnPos, view_as<float>({0.0, 0.0, 0.0}));
+								if (IsValidEntity(entityindex) && IsValidEdict(entityindex))
 								{
-									int entityindex = L4D2_SpawnSpecial(iZombieClass, fSpawnPos, view_as<float>({0.0, 0.0, 0.0}));
-									if (IsValidEntity(entityindex) && IsValidEdict(entityindex))
-									{
-										g_iSpawnMaxCount -= 1;
-										addlimit(iZombieClass);
-										print_type(iZombieClass,g_fSpawnDistanceMax);
-										return;
-									}
-									/*
-									if (SAFEDETECT_IsEntityInEndSaferoom(entityindex))
-									{									
-										//PrintToConsoleAll("[Infected-Spawn]：阳间模式：特感：%N，位置：%.2f，%.2f，%.2f，刷新在终点安全屋内，强制处死", entityindex, fSpawnPos[0], fSpawnPos[1], fSpawnPos[2]);
-										g_iSpawnMaxCount += 1;
-										dellimit(iZombieClass);
-										ForcePlayerSuicide(entityindex);
-										return;
-									}
-									*/
+									g_iSpawnMaxCount -= 1;
+									addlimit(iZombieClass);
+									print_type(iZombieClass,g_fSpawnDistanceMax);
+									return;
 								}
+								/*
+								if (SAFEDETECT_IsEntityInEndSaferoom(entityindex))
+								{									
+									//PrintToConsoleAll("[Infected-Spawn]：阳间模式：特感：%N，位置：%.2f，%.2f，%.2f，刷新在终点安全屋内，强制处死", entityindex, fSpawnPos[0], fSpawnPos[1], fSpawnPos[2]);
+									g_iSpawnMaxCount += 1;
+									dellimit(iZombieClass);
+									ForcePlayerSuicide(entityindex);
+									return;
+								}
+								*/
 							}
 						}
-						
 					}
 				}
 			}			
-		}
-	//}
+		//}
+	}
 }
 
 public void ResetInfectedNumber(){

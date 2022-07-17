@@ -1434,7 +1434,7 @@ float GetMaxSurvivorCompletion()
 			pNavArea = L4D2Direct_GetTerrorNavArea(origin);
 			if (pNavArea == Address_Null) 
 			{
-				pNavArea = L4D_GetNearestNavArea(origin, 300, false, false);
+				pNavArea = L4D_GetNearestNavArea(origin, 300, false, false, false, 2);
 			}
 			if (pNavArea != Address_Null) {
 				tmp_flow = L4D2Direct_GetTerrorNavAreaFlow(pNavArea);
