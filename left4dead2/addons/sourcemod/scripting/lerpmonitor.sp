@@ -283,7 +283,7 @@ void ProcessPlayerLerp(int client, bool load = false, bool team = false)
 				}
 			}
 			
-			CPrintToChatAllEx(client, "{default}<{olive}Lerp{default}> {teamcolor}%N {default}你因为你的lerp为 {teamcolor}%.01f 而被强行旁观", client, newLerpTime * 1000);
+			CPrintToChatAllEx(client, "{default}<{olive}Lerp{default}> {teamcolor}%N {default}因为lerp为 {teamcolor}%.01f 而被强行旁观", client, newLerpTime * 1000);
 			ChangeClientTeam(client, L4D_TEAM_SPECTATE);
 			CPrintToChatEx(client, client, "{default}<{olive}Lerp{default}> 服务器允许lerp范围 (最小: {teamcolor}%.01f{default}, 最大: {teamcolor}%.01f{default})", cVarMinLerp.FloatValue * 1000, cVarMaxLerp.FloatValue * 1000);
 			CPrintToChatEx(client, client, "{default}<{olive}Lerp{default}> 修改lerp值指令为cl_interp xx (其中: {teamcolor}xx{default}为你想要设为的{teamcolor}lerp值/1000{default})", cVarMinLerp.FloatValue * 1000, cVarMaxLerp.FloatValue * 1000);		

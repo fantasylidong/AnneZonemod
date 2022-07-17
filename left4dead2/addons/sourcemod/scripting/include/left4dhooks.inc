@@ -58,9 +58,9 @@
 
 
 
-// Natives: 227
+// Natives: 228
 // L4D1 = 29 [left4downtown] + 47 [l4d_direct] + 15 [l4d2addresses] + 43 [silvers - mine!] + 4 [anim] = 133
-// L4D2 = 60 [left4downtown] + 61 [l4d_direct] + 26 [l4d2addresses] + 80 [silvers - mine!] + 4 [anim] = 224
+// L4D2 = 61 [left4downtown] + 61 [l4d_direct] + 26 [l4d2addresses] + 81 [silvers - mine!] + 4 [anim] = 225
 
 // Forwards: 144
 // L4D1 = 109;
@@ -2557,12 +2557,14 @@ native bool L4D_GetRandomPZSpawnPosition(int client, int zombieClass, int attemp
  *
  * @param vecPos			The vector array to use to retrieve the NavArea
  * @param maxDist			Furthest distance to the nearest nav area
+ * @param anyZ				Any ground position?
  * @param checkLOS			Check line of sight
  * @param checkGround		Check if on ground?
+ * @param teamID			Team ID to check for
  *
  * @return					The NavArea value, or 0 on failure probably
  */
-native any L4D_GetNearestNavArea(const float vecPos[3], float maxDist = 1000.0, bool checkLOS = false, bool checkGround = false);
+native any L4D_GetNearestNavArea(const float vecPos[3], float maxDist = 300.0, bool anyZ = false, bool checkLOS = false, bool checkGround = false, int teamID = 2);
 
 /**
  * @brief Returns the nav address of the last known area.
@@ -2676,6 +2678,19 @@ native bool L4D2_IsReachable(int client, const float vecPos[3]);
  */
 // L4D2 only.
 native float L4D2_NavAreaTravelDistance(float startPos[3], float endPos[3], bool ignoreNavBlockers);
+
+/**
+ * @brief Test two vector positions if they can be reached (only returns false if a location has no valid NavArea, out-of-bounds can be valid).
+ *
+ * @param		nav_startPos		The NavArea address start position (can use L4D_GetNearestNavArea)
+ * @param		nav_endPos			The NavArea address end position from (can use L4D_GetNearestNavArea)
+ * @param		flMaxPathLength		Maximum distance allowed between the two points
+ * @param		teamID				Which team to valid date the path for
+ * @param		ignoreNavBlockers	Should nav blockers be ignored or not
+ * @return		Returns true if a path exists, false if not or on script error.
+ */
+// L4D2 only.
+native bool L4D2_NavAreaBuildPath(Address nav_startPos, Address nav_endPos, float flMaxPathLength, int teamID, bool ignoreNavBlockers);
 
 /**
  * @brief Returns if players can control infected.
@@ -3093,19 +3108,6 @@ native any L4D2_VScriptWrapper_GetSenseFlags(int bot);
 // L4D2 only.
 #pragma deprecated Use L4D2_NavAreaBuildPath instead (kept here for speed comparison)
 native bool L4D2_VScriptWrapper_NavAreaBuildPath(const float startPos[3], const float endPos[3], float flMaxPathLength, bool checkLOS, bool checkGround, int teamID, bool ignoreNavBlockers);
-
-/**
- * @brief Test two vector positions if they can be reached (only returns false if a location has no valid NavArea, out-of-bounds can be valid).
- *
- * @param		nav_startPos		The NavArea address start position (can use L4D_GetNearestNavArea)
- * @param		nav_endPos			The NavArea address end position from (can use L4D_GetNearestNavArea)
- * @param		flMaxPathLength		Maximum distance allowed between the two points
- * @param		teamID				Which team to valid date the path for
- * @param		ignoreNavBlockers	Should nav blockers be ignored or not
- * @return		Returns true if a path exists, false if not or on script error.
- */
-// L4D2 only.
-native bool L4D2_NavAreaBuildPath(Address nav_startPos, Address nav_endPos, float flMaxPathLength, int teamID, bool ignoreNavBlockers);
 
 /**
  * @brief Compute distance between two areas.
