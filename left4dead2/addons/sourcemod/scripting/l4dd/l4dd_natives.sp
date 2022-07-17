@@ -190,8 +190,7 @@ void ValidateOffset(int test, const char[] name, bool check = true)
 // ====================================================================================================
 //										SILVERS NATIVES
 // ====================================================================================================
-// Native: "L4D_GetPointer"
-any Native_GetPointer(Handle plugin, int numParams)
+any Native_GetPointer(Handle plugin, int numParams) // Native ""L4D_GetPointer"
 {
 	PointerType ptr_type = GetNativeCell(1);
 
@@ -212,20 +211,17 @@ any Native_GetPointer(Handle plugin, int numParams)
 	return 0;
 }
 
-// Native: "L4D_GetClientFromAddress"
-int Native_GetClientFromAddress(Handle plugin, int numParams)
+int Native_GetClientFromAddress(Handle plugin, int numParams) // Native ""L4D_GetClientFromAddress"
 {
 	return GetClientFromAddress(GetNativeCell(1));
 }
 
-// Native: "L4D_GetEntityFromAddress"
-int Native_GetEntityFromAddress(Handle plugin, int numParams)
+int Native_GetEntityFromAddress(Handle plugin, int numParams) // Native ""L4D_GetEntityFromAddress"
 {
 	return GetEntityFromAddress(GetNativeCell(1));
 }
 
-// Native: "L4D_ReadMemoryString"
-int Native_ReadMemoryString(Handle plugin, int numParams)
+int Native_ReadMemoryString(Handle plugin, int numParams) // Native ""L4D_ReadMemoryString"
 {
 	int addy = GetNativeCell(1);
 	int maxlength = GetNativeCell(3);
@@ -238,8 +234,7 @@ int Native_ReadMemoryString(Handle plugin, int numParams)
 	return 0;
 }
 
-// Native: "L4D_GetServerOS"
-int Native_GetServerOS(Handle plugin, int numParams)
+int Native_GetServerOS(Handle plugin, int numParams) // Native ""L4D_GetServerOS"
 {
 	return g_bLinuxOS;
 }
@@ -852,7 +847,7 @@ int Native_CBaseEntity_ApplyLocalAngularVelocityImpulse(Handle plugin, int numPa
 
 	float vAng[3];
 	int entity = GetNativeCell(1);
-	GetNativeArray(2, vAng, 3);
+	GetNativeArray(2, vAng, sizeof(vAng));
 
 	//PrintToServer("#### CALL g_hSDK_CBaseEntity_ApplyLocalAngularVelocityImpulse");
 	SDKCall(g_hSDK_CBaseEntity_ApplyLocalAngularVelocityImpulse, entity, vAng);
@@ -883,12 +878,16 @@ int Native_CNavMesh_GetNearestNavArea(Handle plugin, int numParams) // Native "L
 	ValidateNatives(g_hSDK_CNavMesh_GetNearestNavArea, "CNavMesh::GetNearestNavArea");
 
 	float vPos[3];
-	GetNativeArray(1, vPos, 3);
+	GetNativeArray(1, vPos, sizeof(vPos));
 
 	float flMaxPathLength = GetNativeCell(2);
+	bool anyZ = GetNativeCell(3);
+	bool checkLOS = GetNativeCell(4);
+	bool checkGround = GetNativeCell(5);
+	bool teamID = GetNativeCell(6);
 
 	//PrintToServer("#### CALL Native_CNavMesh_GetNearestNavArea");
-	int result = SDKCall(g_hSDK_CNavMesh_GetNearestNavArea, g_pNavMesh, vPos, 0, flMaxPathLength, 0, 1, 0);
+	int result = SDKCall(g_hSDK_CNavMesh_GetNearestNavArea, g_pNavMesh, vPos, anyZ, flMaxPathLength, checkLOS, checkGround, teamID);
 	return result;
 }
 
@@ -1012,7 +1011,7 @@ int Native_GetCheckpointFirst(Handle plugin, int numParams) // Native "L4D_GetCh
 		{
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vPos);
 
-			Address area = view_as<Address>(SDKCall(g_hSDK_CNavMesh_GetNearestNavArea, g_pNavMesh, vPos, 0, 10000.0, 0, 1, 0));
+			Address area = view_as<Address>(SDKCall(g_hSDK_CNavMesh_GetNearestNavArea, g_pNavMesh, vPos, 0, 1000.0, 0, 1, 0));
 			if( area )
 			{
 				val = view_as<float>(LoadFromAddress(area + view_as<Address>(g_iOff_m_flow), NumberType_Int32));
@@ -1061,7 +1060,7 @@ int Native_GetCheckpointLast(Handle plugin, int numParams) // Native "L4D_GetChe
 		{
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", vPos);
 
-			Address area = view_as<Address>(SDKCall(g_hSDK_CNavMesh_GetNearestNavArea, g_pNavMesh, vPos, 0, 10000.0, 0, 1, 0));
+			Address area = view_as<Address>(SDKCall(g_hSDK_CNavMesh_GetNearestNavArea, g_pNavMesh, vPos, 0, 1000.0, 0, 1, 0));
 			if( area )
 			{
 				val = view_as<float>(LoadFromAddress(area + view_as<Address>(g_iOff_m_flow), NumberType_Int32));
@@ -1170,16 +1169,15 @@ int Native_CBaseGrenade_Detonate(Handle plugin, int numParams) // Native "L4D_De
 }
 
 /*
-// Native: "L4D_StartBurning"
-int Native_CInferno_StartBurning(Handle plugin, int numParams)
+int Native_CInferno_StartBurning(Handle plugin, int numParams) // Native ""L4D_StartBurning"
 {
 	ValidateNatives(g_hSDK_CInferno_StartBurning, "CInferno::StartBurning");
 
 	float vPos[3], vVel[3], vNorm[3];
 	int entity = GetNativeCell(1);
-	GetNativeArray(2, vPos, 3);
-	GetNativeArray(3, vNorm, 3);
-	GetNativeArray(4, vVel, 3);
+	GetNativeArray(2, vPos, sizeof(vPos));
+	GetNativeArray(3, vNorm, sizeof(vNorm));
+	GetNativeArray(4, vVel, sizeof(vVel));
 
 	PrintToChatAll("#### CALL g_hSDK_CInferno_StartBurning [%d] %f", entity, vPos[1]);
 	SDKCall(g_hSDK_CInferno_StartBurning, entity, vPos, vNorm, vVel, 1);
@@ -1203,8 +1201,8 @@ int Native_CTankRock_Create(Handle plugin, int numParams) // Native "L4D_TankRoc
 	// Get client index and origin/angle to throw
 	float vPos[3], vAng[3];
 	int client = GetNativeCell(1);
-	GetNativeArray(2, vPos, 3);
-	GetNativeArray(3, vAng, 3);
+	GetNativeArray(2, vPos, sizeof(vPos));
+	GetNativeArray(3, vAng, sizeof(vAng));
 
 	// Create rock
 	int entity = CreateEntityByName("env_rock_launcher");
@@ -1273,8 +1271,8 @@ int Native_CPipeBombProjectile_Create(Handle plugin, int numParams) // Native "L
 
 	float vPos[3], vAng[3];
 	int client = GetNativeCell(1);
-	GetNativeArray(2, vPos, 3);
-	GetNativeArray(3, vAng, 3);
+	GetNativeArray(2, vPos, sizeof(vPos));
+	GetNativeArray(3, vAng, sizeof(vAng));
 
 	//PrintToServer("#### CALL g_hSDK_CPipeBombProjectile_Create");
 	return SDKCall(g_hSDK_CPipeBombProjectile_Create, vPos, vAng, vAng, vAng, client, 2.0);
@@ -1286,8 +1284,8 @@ int Native_CMolotovProjectile_Create(Handle plugin, int numParams) // Native "L4
 
 	float vPos[3], vAng[3];
 	int client = GetNativeCell(1);
-	GetNativeArray(2, vPos, 3);
-	GetNativeArray(3, vAng, 3);
+	GetNativeArray(2, vPos, sizeof(vPos));
+	GetNativeArray(3, vAng, sizeof(vAng));
 
 	//PrintToServer("#### CALL g_hSDK_CMolotovProjectile_Create");
 	return SDKCall(g_hSDK_CMolotovProjectile_Create, vPos, vAng, vAng, vAng, client, 2.0);
@@ -1299,8 +1297,8 @@ int Native_CVomitJarProjectile_Create(Handle plugin, int numParams) // Native "L
 
 	float vPos[3], vAng[3];
 	int client = GetNativeCell(1);
-	GetNativeArray(2, vPos, 3);
-	GetNativeArray(3, vAng, 3);
+	GetNativeArray(2, vPos, sizeof(vPos));
+	GetNativeArray(3, vAng, sizeof(vAng));
 
 	//PrintToServer("#### CALL g_hSDK_CVomitJarProjectile_Create");
 	return SDKCall(g_hSDK_CVomitJarProjectile_Create, vPos, vAng, vAng, vAng, client, 2.0);
@@ -1312,8 +1310,8 @@ int Native_CGrenadeLauncher_Projectile_Create(Handle plugin, int numParams) // N
 
 	float vPos[3], vAng[3];
 	int client = GetNativeCell(1);
-	GetNativeArray(2, vPos, 3);
-	GetNativeArray(3, vAng, 3);
+	GetNativeArray(2, vPos, sizeof(vPos));
+	GetNativeArray(3, vAng, sizeof(vAng));
 
 	//PrintToServer("#### CALL g_hSDK_CGrenadeLauncher_Projectile_Create");
 	return SDKCall(g_hSDK_CGrenadeLauncher_Projectile_Create, vPos, vAng, vAng, vAng, client, 2.0);
@@ -1327,8 +1325,8 @@ int Native_CSpitterProjectile_Create(Handle plugin, int numParams) // Native "L4
 
 	float vPos[3], vAng[3];
 	int client = GetNativeCell(1);
-	GetNativeArray(2, vPos, 3);
-	GetNativeArray(3, vAng, 3);
+	GetNativeArray(2, vPos, sizeof(vPos));
+	GetNativeArray(3, vAng, sizeof(vAng));
 
 	//PrintToServer("#### CALL g_hSDK_CSpitterProjectile_Create");
 	return SDKCall(g_hSDK_CSpitterProjectile_Create, vPos, vAng, vAng, vAng, client);
@@ -1471,7 +1469,7 @@ int Native_SurvivorBot_IsReachable(Handle plugin, int numParams) // Native "L4D2
 	}
 
 	float vPos[3];
-	GetNativeArray(2, vPos, 3);
+	GetNativeArray(2, vPos, sizeof(vPos));
 
 	//PrintToServer("#### CALL g_hSDK_SurvivorBot_IsReachable");
 	return SDKCall(g_hSDK_SurvivorBot_IsReachable, client, vPos);
@@ -1801,7 +1799,7 @@ int Native_CTerrorPlayer_OnStaggered(Handle plugin, int numParams) // Native "L4
 	int a1 = GetNativeCell(1);
 	int a2 = GetNativeCell(2);
 	float vDir[3];
-	GetNativeArray(3, vDir, 3);
+	GetNativeArray(3, vDir, sizeof(vDir));
 
 	if( IsNativeParamNullVector(3) )
 	{
@@ -1872,8 +1870,8 @@ int Native_ZombieManager_SpawnTank(Handle plugin, int numParams) // Native "L4D2
 	ValidateNatives(g_hSDK_ZombieManager_SpawnTank, "ZombieManager::SpawnTank");
 
 	float vPos[3], vAng[3];
-	GetNativeArray(1, vPos, 3);
-	GetNativeArray(2, vAng, 3);
+	GetNativeArray(1, vPos, sizeof(vPos));
+	GetNativeArray(2, vAng, sizeof(vAng));
 
 	//PrintToServer("#### CALL g_hSDK_ZombieManager_SpawnTank");
 	return SDKCall(g_hSDK_ZombieManager_SpawnTank, g_pZombieManager, vPos, vAng);
@@ -1885,8 +1883,8 @@ int Native_ZombieManager_SpawnSpecial(Handle plugin, int numParams) // Native "L
 
 	float vPos[3], vAng[3];
 	int zombieClass = GetNativeCell(1);
-	GetNativeArray(2, vPos, 3);
-	GetNativeArray(3, vAng, 3);
+	GetNativeArray(2, vPos, sizeof(vPos));
+	GetNativeArray(3, vAng, sizeof(vAng));
 
 	if( g_bLeft4Dead2 )
 	{
@@ -1932,8 +1930,8 @@ int Native_ZombieManager_SpawnWitch(Handle plugin, int numParams) // Native "L4D
 	ValidateNatives(g_hSDK_ZombieManager_SpawnWitch, "ZombieManager::SpawnWitch");
 
 	float vPos[3], vAng[3];
-	GetNativeArray(1, vPos, 3);
-	GetNativeArray(2, vAng, 3);
+	GetNativeArray(1, vPos, sizeof(vPos));
+	GetNativeArray(2, vAng, sizeof(vAng));
 
 	//PrintToServer("#### CALL g_hSDK_ZombieManager_SpawnWitch");
 	return SDKCall(g_hSDK_ZombieManager_SpawnWitch, g_pZombieManager, vPos, vAng);
@@ -1947,8 +1945,8 @@ int Native_ZombieManager_SpawnWitchBride(Handle plugin, int numParams) // Native
 	ValidateNatives(g_hSDK_ZombieManager_SpawnWitchBride, "ZombieManager::SpawnWitchBride");
 
 	float vPos[3], vAng[3];
-	GetNativeArray(1, vPos, 3);
-	GetNativeArray(2, vAng, 3);
+	GetNativeArray(1, vPos, sizeof(vPos));
+	GetNativeArray(2, vAng, sizeof(vAng));
 
 	//PrintToServer("#### CALL g_hSDK_ZombieManager_SpawnWitchBride");
 	return SDKCall(g_hSDK_ZombieManager_SpawnWitchBride, g_pZombieManager, vPos, vAng);
@@ -2719,7 +2717,7 @@ int Native_SetVersusCampaignScores(Handle plugin, int numParams) // Native "L4D2
 	ValidateAddress(g_pVersusMode, "m_iCampaignScores");
 
 	int vals[2];
-	GetNativeArray(1, vals, 2);
+	GetNativeArray(1, vals, sizeof(vals));
 	StoreToAddress(view_as<Address>(g_pVersusMode + g_iOff_m_iCampaignScores), vals[0], NumberType_Int32, false);
 	StoreToAddress(view_as<Address>(g_pVersusMode + g_iOff_m_iCampaignScores + 4), vals[1], NumberType_Int32, false);
 
@@ -2749,7 +2747,7 @@ int Native_SetVersusTankFlowPercent(Handle plugin, int numParams) // Native "L4D
 	ValidateAddress(g_pVersusMode, "m_fTankSpawnFlowPercent");
 
 	float vals[2];
-	GetNativeArray(1, vals, 2);
+	GetNativeArray(1, vals, sizeof(vals));
 	StoreToAddress(view_as<Address>(g_pVersusMode + g_iOff_m_fTankSpawnFlowPercent), view_as<int>(vals[0]), NumberType_Int32, false);
 	StoreToAddress(view_as<Address>(g_pVersusMode + g_iOff_m_fTankSpawnFlowPercent + 4), view_as<int>(vals[1]), NumberType_Int32, false);
 
@@ -2779,7 +2777,7 @@ int Native_SetVersusWitchFlowPercent(Handle plugin, int numParams) // Native "L4
 	ValidateAddress(g_pVersusMode, "m_fWitchSpawnFlowPercent");
 
 	float vals[2];
-	GetNativeArray(1, vals, 2);
+	GetNativeArray(1, vals, sizeof(vals));
 	StoreToAddress(view_as<Address>(g_pVersusMode + g_iOff_m_fWitchSpawnFlowPercent), view_as<int>(vals[0]), NumberType_Int32, false);
 	StoreToAddress(view_as<Address>(g_pVersusMode + g_iOff_m_fWitchSpawnFlowPercent + 4), view_as<int>(vals[1]), NumberType_Int32, false);
 
@@ -3353,7 +3351,7 @@ any Direct_GetTerrorNavArea(Handle plugin, int numParams) // Native "L4D2Direct_
 	ValidateNatives(g_hSDK_CNavMesh_GetNavArea, "CNavMesh::GetNavArea");
 
 	float vPos[3];
-	GetNativeArray(1, vPos, 3);
+	GetNativeArray(1, vPos, sizeof(vPos));
 
 	float beneathLimit = GetNativeCell(2);
 
@@ -3783,7 +3781,7 @@ int Native_CTerrorPlayer_Fling(Handle plugin, int numParams) // Native "L4D2_CTe
 	int client = GetNativeCell(1);
 	int attacker = GetNativeCell(2);
 	float vDir[3];
-	GetNativeArray(3, vDir, 3);
+	GetNativeArray(3, vDir, sizeof(vDir));
 
 	//PrintToServer("#### CALL g_hSDK_CTerrorPlayer_Fling");
 	SDKCall(g_hSDK_CTerrorPlayer_Fling, client, vDir, 76, attacker, 3.0); // 76 is the 'got bounced' animation in L4D2. 3.0 = incapTime, what's this mean?
@@ -4247,8 +4245,7 @@ int Native_CDirectorScavengeMode_HideScoreboardNonVirtual(Handle plugin, int num
 	return 0;
 }
 
-// Native "L4D2_HideScoreboard"
-int Native_CDirector_HideScoreboard(Handle plugin, int numParams)
+int Native_CDirector_HideScoreboard(Handle plugin, int numParams) // Native "L4D2_HideScoreboard"
 {
 	if( !g_bLeft4Dead2 ) ThrowNativeError(SP_ERROR_NOT_RUNNABLE, NATIVE_UNSUPPORTED2);
 
@@ -4261,8 +4258,7 @@ int Native_CDirector_HideScoreboard(Handle plugin, int numParams)
 	return 0;
 }
 
-// Native "L4D_RegisterForbiddenTarget"
-int Native_CDirector_RegisterForbiddenTarget(Handle plugin, int numParams)
+int Native_CDirector_RegisterForbiddenTarget(Handle plugin, int numParams) // Native "L4D_RegisterForbiddenTarget"
 {
 	ValidateAddress(g_pDirector, "g_pDirector");
 	ValidateNatives(g_hSDK_CDirector_RegisterForbiddenTarget, "CDirector::RegisterForbiddenTarget");
@@ -4273,8 +4269,7 @@ int Native_CDirector_RegisterForbiddenTarget(Handle plugin, int numParams)
 	return SDKCall(g_hSDK_CDirector_RegisterForbiddenTarget, g_pDirector, entity);
 }
 
-// Native "L4D_UnRegisterForbiddenTarget"
-int Native_CDirector_UnregisterForbiddenTarget(Handle plugin, int numParams)
+int Native_CDirector_UnregisterForbiddenTarget(Handle plugin, int numParams) // Native "L4D_UnRegisterForbiddenTarget"
 {
 	ValidateAddress(g_pDirector, "g_pDirector");
 	ValidateNatives(g_hSDK_CDirector_UnregisterForbiddenTarget, "CDirector::UnregisterForbiddenTarget");

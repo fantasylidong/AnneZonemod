@@ -243,19 +243,15 @@ public Action Timer_KickBot(Handle timer, int client)
 // *********************
 public void OnGameFrame()
 {
-	/*
 	// 根据情况动态调整 z_maxplayers_zombie 数值
 	if (g_iSiLimit > g_hMaxPlayerZombies.IntValue)
 	{
 		CreateTimer(0.1, MaxSpecialsSet);
 	}
-	*/
-	if (g_bIsLate && g_iSpawnMaxCount > 0)
+	if (g_bIsLate && g_iSpawnMaxCount > 0 && g_iSiLimit > iHunterLimit+iSmokerLimit+iBoomerLimit+iSpitterLimit+iJockeyLimit+iChargerLimit)
 	{
-		if (g_iSiLimit > iHunterLimit+iSmokerLimit+iBoomerLimit+iSpitterLimit+iJockeyLimit+iChargerLimit)
-		{	
 			if(g_bCanRun)
-				HasAnyCountFull();
+				HasAnyCountFull();			
 			float fSpawnPos[3] = {0.0}, fSurvivorPos[3] = {0.0}, fDirection[3] = {0.0}, fEndPos[3] = {0.0}, fMins[3] = {0.0}, fMaxs[3] = {0.0},dist;	
 			if (IsValidSurvivor(g_iTargetSurvivor))
 			{
@@ -264,12 +260,12 @@ public void OnGameFrame()
 				g_fSpawnDistanceMax += 5.0;
 				if(g_fSpawnDistanceMax < 500.0)
 				{
-					dist = 900.0;
+					dist = 850.0;
 					fMaxs[2] = fSurvivorPos[2] + 500.0;
 				}
 				else
 				{
-					dist = 400.0 + g_fSpawnDistanceMax;
+					dist = 350.0 + g_fSpawnDistanceMax;
 					fMaxs[2] = fSurvivorPos[2] + g_fSpawnDistanceMax;
 				}
 				fMins[0] = fSurvivorPos[0] - g_fSpawnDistanceMax;
@@ -326,12 +322,12 @@ public void OnGameFrame()
 					{
 						int index = g_iSurvivors[count];
 						if(!IsValidSurvivor(index))
-							continue;
+							continue;					
 						GetClientEyePosition(index, fSurvivorPos);
 						fSurvivorPos[2] -= 60.0;
-						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0);
-						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0);
-						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false))
+						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0, false, false, false, 3);
+						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0, false, false, false, 2);
+						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin)
 						{
 							int iZombieClass = IsBotTypeNeeded();
 							if (iZombieClass > 0&&g_iSpawnMaxCount > 0)
@@ -359,7 +355,7 @@ public void OnGameFrame()
 					}
 				}
 			}			
-		}
+		//}
 	}
 }
 /*
