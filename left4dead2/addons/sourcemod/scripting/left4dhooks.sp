@@ -703,8 +703,7 @@ void ConVarChanged_Mode(Handle convar, const char[] oldValue, const char[] newVa
 	GetGameMode();
 }
 
-// Forward "L4D_OnGameModeChange"
-void GetGameMode()
+void GetGameMode() // Forward "L4D_OnGameModeChange"
 {
 	g_iCurrentMode = 0;
 
@@ -870,8 +869,7 @@ public void OnClientDisconnect(int client)
 // =========================
 // ANIMATION NATIVES
 // =========================
-// Native: "AnimHookEnable"
-int Native_AnimHookEnable(Handle plugin, int numParams)
+int Native_AnimHookEnable(Handle plugin, int numParams) // Native "AnimHookEnable"
 {
 	// Validate client
 	int client = GetNativeCell(1);
@@ -904,8 +902,7 @@ int Native_AnimHookEnable(Handle plugin, int numParams)
 	return true;
 }
 
-// Native: "AnimHookDisable"
-int Native_AnimHookDisable(Handle plugin, int numParams)
+int Native_AnimHookDisable(Handle plugin, int numParams) // Native "AnimHookDisable"
 {
 	int client = GetNativeCell(1);
 
@@ -982,8 +979,7 @@ void OnFrameRemoveDetour()
 	}
 }
 
-// Native: "AnimGetActivity"
-int Native_AnimGetActivity(Handle plugin, int numParams)
+int Native_AnimGetActivity(Handle plugin, int numParams) // Native "AnimGetActivity"
 {
 	int sequence = GetNativeCell(1);
 	int maxlength = GetNativeCell(3);
@@ -998,8 +994,7 @@ int Native_AnimGetActivity(Handle plugin, int numParams)
 	return false;
 }
 
-// Native: "AnimGetFromActivity"
-int Native_AnimGetFromActivity(Handle plugin, int numParams)
+int Native_AnimGetFromActivity(Handle plugin, int numParams) // Native "AnimGetFromActivity"
 {
 	int maxlength;
 	GetNativeStringLength(1, maxlength);
@@ -1118,7 +1113,6 @@ void AddonsDisabler_Unpatch()
 // ====================================================================================================
 //										ADDONS DISABLER DETOUR
 // ====================================================================================================
-// Forward "L4D2_OnClientDisableAddons"
 MRESReturn DTR_AddonsDisabler(int pThis, Handle hReturn, DHookParam hParams) // Forward "L4D2_OnClientDisableAddons"
 {
 	// Details on finding offsets can be found here: https://github.com/ProdigySim/left4dhooks/pull/1
