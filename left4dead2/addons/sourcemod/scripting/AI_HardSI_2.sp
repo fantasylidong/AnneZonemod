@@ -295,6 +295,8 @@ public Action OnSpitterRunCmd(int client, int &buttons, float vel[3], float angl
 public Action OnHunterRunCmd(int client, int &buttons, float vel[3], float angles[3])
 {
 	Action react = Plugin_Continue;
+	if (GetEntPropEnt(client, Prop_Send, "m_pounceVictim") > 0)
+			return react;
 	bool internaltrigger = false;
 	if (!DelayExpired(client, 1, HUNTERATTACKTIME) && GetEntityMoveType(client) != MOVETYPE_LADDER)
 	{
