@@ -165,10 +165,14 @@ public Action CoolDown(Handle timer,int client){
 	bCanSmoker[client]=true;
 }
 
+
+
 public Action OnPlayerRunCmd(int smoker, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon)
 {
 	if (IsAiSmoker(smoker))
 	{
+		if(GetEntPropEnt(smoker, Prop_Send, "m_tongueVictim") > 0)
+			return Plugin_Continue;
 		int iTarget = GetClientAimTarget(smoker, true);
 		float fSmokerPos[3] = {0.0}, fTargetPos[3] = {0.0}, fTargetAngles[3] = {0.0};
 		GetClientAbsOrigin(smoker, fSmokerPos);
@@ -242,6 +246,8 @@ public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
 {
 	if (IsAiSmoker(specialInfected))
 	{
+		if(GetEntPropEnt(specialInfected, Prop_Send, "m_tongueVictim") > 0)
+			return Plugin_Continue;
 		// 不拉被控和倒地的人
 		if (IsSurvivor(curTarget))
 		{

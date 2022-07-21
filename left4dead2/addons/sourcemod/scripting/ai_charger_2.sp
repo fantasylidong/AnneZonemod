@@ -55,11 +55,14 @@ public void evt_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 		is_charging[client] = false;
 	}
 }
+
 // 主要
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon)
 {
 	if (IsCharger(client) && IsPlayerAlive(client))
 	{
+		if(GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
+			return Plugin_Continue;
 		bool has_sight = view_as<bool>(GetEntProp(client, Prop_Send, "m_hasVisibleThreats"));
 		int target = GetClientAimTarget(client, true), flags = GetEntityFlags(client), closet_survivor_distance = GetClosetSurvivorDistance(client), ability = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 		float self_pos[3] = {0.0}, target_pos[3] = {0.0}, vec_speed[3] = {0.0}, vel_buffer[3] = {0.0}, cur_speed = 0.0;
@@ -194,6 +197,8 @@ public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
 	int new_target = 0;
 	if (IsCharger(specialInfected))
 	{
+		if(GetEntPropEnt(specialInfected, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(specialInfected, Prop_Send, "m_carryVictim") > 0)
+			return Plugin_Continue;
 		float self_pos[3] = {0.0}, target_pos[3] = {0.0};
 		GetClientEyePosition(specialInfected, self_pos);
 		// 获取在冲锋范围内的目标
