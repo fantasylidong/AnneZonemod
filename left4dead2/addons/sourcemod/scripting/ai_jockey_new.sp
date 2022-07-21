@@ -70,6 +70,8 @@ public Action OnPlayerRunCmd(int jockey, int &buttons, int &impulse, float vel[3
 {
 	if (IsAiJockey(jockey))
 	{
+		if(GetEntPropEnt(jockey, Prop_Send, "m_jockeyVictim") > 0)
+			return Plugin_Continue;
 		float fSpeed[3] = {0.0}, fCurrentSpeed, fJockeyPos[3] = {0.0};
 		GetEntPropVector(jockey, Prop_Data, "m_vecVelocity", fSpeed);
 		fCurrentSpeed = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));

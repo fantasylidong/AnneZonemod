@@ -95,6 +95,8 @@ public Action OnPlayerRunCmd(int hunter, int& buttons, int& impulse, float vel[3
 {
 	if (IsAiHunter(hunter))
 	{
+		if (GetEntPropEnt(hunter, Prop_Send, "m_pounceVictim") > 0)
+			return Plugin_Continue;
 		buttons &= ~IN_ATTACK2;
 		int iFlags = GetEntityFlags(hunter);
 		float fDistance = NearestSurvivorDistance(hunter);
@@ -144,6 +146,8 @@ public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
 {
 	if (IsAiHunter(specialInfected))
 	{
+		if (GetEntPropEnt(specialInfected, Prop_Send, "m_pounceVictim") > 0)
+			return Plugin_Continue;
 		float fSelfPos[3];
 		GetClientAbsOrigin(specialInfected, fSelfPos);
 		if (IsSurvivor(curTarget))
