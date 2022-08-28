@@ -21,15 +21,17 @@ enum struct PlayerStruct{
 	int ClientHat;
 	int GlowType;
 	bool ClientFirstBuy;
-	bool check;
+	bool Check;
+	bool CanBuy;
 	CustomTags tags;
 }
 PlayerStruct player[MAXPLAYERS + 1];
 ConVar GaoJiRenJi;
 bool valid=true;
 bool IsStart=false;
+bool IsAllowBigGun = false;
 int InfectedNumber=6;
-ConVar g_InfectedNumber;
+ConVar AllowBigGun, g_InfectedNumber;
 //new lastpoints[MAXPLAYERS + 1];
 
 //枚举变量,修改武器消耗积分在此。
@@ -156,6 +158,7 @@ public void OnMapStart()
 		if(IsSurvivor(i))
 			{
 				player[i].ClientFirstBuy=true;
+				player[i].CanBuy=true;
 				player[i].ClientPoints=500;
 			}
 		else
@@ -175,9 +178,11 @@ public void  OnPluginStart()
 	HookEvent("map_transition", EventMapChange);
 	HookEvent("player_afk", 	Event_PlayerAFK);
 	//HookEvent("player_team", 	Event_PlayerTeam, EventHookMode_Pre);
+	AllowBigGun = CreateConVar("rpg_allow_biggun", "0", "商店是否允许购买大枪", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	GaoJiRenJi=FindConVar("sb_fix_enabled");
 	InfectedNumber=GetConVarInt(FindConVar("l4d_infected_limit"));
 	g_InfectedNumber=FindConVar("l4d_infected_limit");
+	AllowBigGun.AddChangeHook(ConVarChanged_Cvars);
 	g_InfectedNumber.AddChangeHook(ConVarChanged_Cvars);
 	GaoJiRenJi.AddChangeHook(ConVarChanged_Cvars);
 	ReturnBlood = CreateConVar("ReturnBlood", "0", "回血模式");
@@ -196,6 +201,7 @@ public void  OnPluginStart()
 	for(int i=1;i<MaxClients;i++){
 			player[i].ClientPoints=500;
 			player[i].ClientFirstBuy=true;
+			player[i].CanBuy=true;
 	}
 }
 public void OnConfigsExecuted()
@@ -220,6 +226,10 @@ void ConVarChanged_Cvars(ConVar convar, const char[] oldValue, const char[] newV
 			valid=false;
 		}
 	InfectedNumber=GetConVarInt(FindConVar("l4d_infected_limit"));
+	if(AllowBigGun.IntValue)
+		IsAllowBigGun = true;
+	else
+		IsAllowBigGun = false;
 }
 
 public void Event_PlayerAFK( Event hEvent, const char[] sName, bool bDontBroadcast )
@@ -230,8 +240,8 @@ public void Event_PlayerAFK( Event hEvent, const char[] sName, bool bDontBroadca
 public void Event_Player_Spawn(Event hEvent, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId( hEvent.GetInt( "userid" ));
-	if( client && IsClientInGame( client ) && !player[client].check){
-		player[client].check = true;
+	if( client && IsClientInGame( client ) && !player[client].Check){
+		player[client].Check = true;
 		CreateTimer( 0.3, PlayerSpawnTimer, GetClientUserId( client ), TIMER_FLAG_NO_MAPCHANGE );
 	}
 		
@@ -262,7 +272,7 @@ public Action PlayerSpawnTimer( Handle hTimer, any UserID )
 	{
 		DisableGlow( client );
 	}
-	player[client].check = false;
+	player[client].Check = false;
 }
 
 public void Event_PlayerTeam(Event hEvent, const char[] name, bool dontBroadcast)
@@ -304,6 +314,7 @@ public Action EventMapChange(Handle event, const char []name, bool dontBroadcast
 	for(int i=1;i<MaxClients;i++){
 		player[i].ClientPoints=500;
 		player[i].ClientFirstBuy=true;
+		player[i].CanBuy=true;
 	}
 	IsStart=false;
 	valid=true;
@@ -349,6 +360,7 @@ public Action EventMissionLost(Handle event, const char []name, bool dontBroadca
 	for(int i=1;i<MaxClients;i++){
 				player[i].ClientPoints=500;
 				player[i].ClientFirstBuy=true;
+				player[i].CanBuy=true;
 	}
 	IsStart=false;
 	valid=true;
@@ -446,8 +458,9 @@ public void OnClientPostAdminCheck(int client)
 	player[client].ClientHat = 0;
 	player[client].GlowType = 0;
 	player[client].ClientFirstBuy = true;
+	player[client].CanBuy=true;
 	player[client].ClientPoints = 500;
-	player[client].check = false;
+	player[client].Check = false;
 	ClientSaveToFileLoad(client);
 	CreateTimer(3.0, CheckPlayer, client);
 	CreateTimer(10.0, SetClientTag, client);
@@ -698,8 +711,8 @@ public Action BuyAmmo(int client,int args)
 {
 	if(IsVaildClient(client) && IsPlayerAlive(client)  )
 	{
-    	RemovePoints(client,0,"ammo");
-    	PrintToChatAll("\x04%N \x03快速的补充了子弹",client);
+    	GiveItems(client,"ammo");
+    	PrintToChatAll("\x04%N \x03 补充了子弹",client);
 	}
 }
 
@@ -710,17 +723,21 @@ public Action BuyPen(int client,int args)
 	{
 		if(player[client].ClientFirstBuy){
 			player[client].ClientFirstBuy=false;
+			bool result = false;
 			if(GetRandomInt(0,1))
-				RemovePoints(client,0,"pumpshotgun");
+				result = RemovePoints(client,0,"pumpshotgun");
 			else
-				RemovePoints(client,0,"shotgun_chrome");
+				result = RemovePoints(client,0,"shotgun_chrome");
+			if(result)
 			PrintToChatAll("\x04%N \x03第一次随机白嫖一把喷子",client);
 		}else if(player[client].ClientPoints>49)
 		{
+			bool result = false;
 			if(GetRandomInt(0,1))
-				RemovePoints(client,50,"pumpshotgun");
+				result = RemovePoints(client,0,"pumpshotgun");
 			else
-				RemovePoints(client,50,"shotgun_chrome");
+				result = RemovePoints(client,0,"shotgun_chrome");
+			if(result)
 			PrintToChatAll("\x04%N \x03快速花费50B数随机购买一把单喷",client);
 		}else{
 			PrintToChat(client,"\x03没钱你买个屁喷子，心里没点B数");
@@ -735,11 +752,11 @@ public Action BuyChr(int client,int args)
 	{
 		if(player[client].ClientFirstBuy){
 			player[client].ClientFirstBuy=false;
-			RemovePoints(client,0,"shotgun_chrome");
+			if(RemovePoints(client,0,"shotgun_chrome"))
 			PrintToChatAll("\x04%N \x03第一次白嫖一把二代单喷",client);
 		}else if(player[client].ClientPoints>49)
 		{
-			RemovePoints(client,50,"shotgun_chrome");
+			if(RemovePoints(client,50,"shotgun_chrome"))
 			PrintToChatAll("\x04%N \x03快速花费50B数购买一把二代单喷",client);
 		}else{
 			PrintToChat(client,"\x03没钱你买个屁喷子，心里没点B数");
@@ -754,11 +771,11 @@ public Action BuyPum(int client,int args)
 	{
 		if(player[client].ClientFirstBuy){
 			player[client].ClientFirstBuy=false;
-			RemovePoints(client,0,"pumpshotgun");
+			if(RemovePoints(client,0,"pumpshotgun"))
 			PrintToChatAll("\x04%N \x03第一次白嫖一把一代单喷",client);
 		}else if(player[client].ClientPoints>49)
 		{
-			RemovePoints(client,50,"pumpshotgun");
+			if(RemovePoints(client,50,"pumpshotgun"))
 			PrintToChatAll("\x04%N \x03快速花费50B数随机购买一把一代单喷",client);
 		}else{
 			PrintToChat(client,"\x03没钱你买个屁喷子，心里没点B数");
@@ -773,11 +790,11 @@ public Action BuySmg(int client,int args)
 	{ 
 		if(player[client].ClientFirstBuy){
 			player[client].ClientFirstBuy=false;
-			RemovePoints(client,0,"smg_silenced");
+			if(RemovePoints(client,0,"smg_silenced"))
 			PrintToChatAll("\x04%N \x03第一次白嫖一把消音smg机枪",client);
 		}else if(player[client].ClientPoints>49)
 		{
-			RemovePoints(client,50,"smg_silenced");
+			if(RemovePoints(client,50,"smg_silenced"))
 			PrintToChatAll("\x04%N \x03快速花费50B数购买一把消音smg机枪",client);
 		}else{
 			PrintToChat(client,"\x03没钱你买个屁机枪，心里没点B数");
@@ -792,11 +809,11 @@ public Action BuyUzi(int client,int args)
 	{ 
 		if(player[client].ClientFirstBuy){
 			player[client].ClientFirstBuy=false;
-			RemovePoints(client,0,"smg");
+			if(RemovePoints(client,0,"smg"))
 			PrintToChatAll("\x04%N \x03第一次白嫖一把Uzi",client);
 		}else if(player[client].ClientPoints>49)
 		{
-			RemovePoints(client,50,"smg");
+			if(RemovePoints(client,50,"smg"))
 			PrintToChatAll("\x04%N \x03快速花费50B数随机购买一把Uzi机枪",client);
 		}else{
 			PrintToChat(client,"\x03没钱你买个屁机枪，心里没点B数");
@@ -873,14 +890,27 @@ public Action BuyPill(int client,int args)
 		PrintToChatAll("\x04%N \x03快速花费400B数买了瓶药",client);
 	}
 }
+
+public Action ResetBuy(Handle timer, int client)
+{
+	player[client].CanBuy = true;
+}
+
 //分数操作
 public bool RemovePoints(int client, int costpoints,char bitem[64])
 {
+	if(!player[client].CanBuy)
+	{
+		PrintToChat(client,"\x03商店技能冷却中(冷却时间15s)");
+		return false;
+	}
 	int actuallypoints = player[client].ClientPoints - costpoints;
 	if(IsVaildClient(client) && actuallypoints >= 0)
 	{	
 		GiveItems(client,bitem);
 		player[client].ClientPoints=player[client].ClientPoints - costpoints;
+		player[client].CanBuy = false;
+		CreateTimer(15.0, ResetBuy, client, TIMER_FLAG_NO_MAPCHANGE);
 		return true;
 	}
 	else
@@ -1270,6 +1300,12 @@ public void gun(int client)
 		FormatEx(binfo, sizeof(binfo),  "mp5机枪 %dB数",CostMP5, client);
 		menu.AddItem("smg_mp5", binfo);
 		
+		if(!IsAllowBigGun)
+		{
+			menu.Display(client, 20);
+			return;
+		}
+		
 		FormatEx(binfo, sizeof(binfo),  "一代连发霰弹枪 %dB数",CostAuto, client);
 		menu.AddItem("autoshotgun", binfo);
 
@@ -1456,9 +1492,7 @@ public int gun_back(Menu menu, MenuAction action, int param1, int param2)
 				PrintToChatAll("\x04%N\x03B数-%d,购买了%s，还剩%d的B数",param1,CostMagnum,"马格南",player[param1].ClientPoints);
 			}
 			else if( StrEqual(bitem, "ammo") ){
-				int costpoints = CostAmmo;
-				if(RemovePoints(param1, costpoints, bitem))
-				PrintToChatAll("\x04%N\x03免费补充了子弹",param1,CostAmmo,"子弹",player[param1].ClientPoints);
+				ClientCommand(param1, "sm_ammo");
 			}
 		}
 		case MenuAction_End:

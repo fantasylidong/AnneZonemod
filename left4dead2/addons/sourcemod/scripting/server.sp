@@ -94,7 +94,10 @@ void GetCvars()
 
 public OnPlayerIncappedOrDeath(Handle event, char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(GetEventInt(event,"userid"));
-	if(IsClientConnected(client) && IsClientInGame(client) && (GetClientTeam(client) !=2))
+	if(!client)
+		return;
+	if(!IsClientConnected(client) || !IsClientInGame(client))
+	if((GetClientTeam(client) !=2))
 		return;
 	if(IsTeamImmobilised())
 	{

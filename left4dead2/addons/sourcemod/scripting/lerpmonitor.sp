@@ -90,7 +90,7 @@ public void OnPluginStart()
 	cVarReadyUpLerpChanges = CreateConVar("sm_readyup_lerp_changes", "1", "Allow lerp changes during ready-up", _, true, 0.0, true, 1.0);
 	cVarShowLerpTeamChange = CreateConVar("sm_show_lerp_team_changes", "1", "show a message about the player's lerp if he changes the team", _, true, 0.0, true, 1.0);
 	cVarMinLerp = CreateConVar("sm_min_lerp", "0.000", "Minimum allowed lerp value", _, true, 0.000, true, 0.500);
-	cVarMaxLerp = CreateConVar("sm_max_lerp", "0.067", "Maximum allowed lerp value", _, true, 0.000, true, 0.500);
+	cVarMaxLerp = CreateConVar("sm_max_lerp", "0.100", "Maximum allowed lerp value", _, true, 0.000, true, 0.500);
 	
 	RegConsoleCmd("sm_lerps", Lerps_Cmd, "List the Lerps of all players in game");
 	

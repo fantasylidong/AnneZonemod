@@ -62,7 +62,7 @@ int g_iOffs_SpawnAttributes;
 
 methodmap TerrorNavArea {
 	public TerrorNavArea(const float vPos[3]) {
-		return view_as<TerrorNavArea>(L4D_GetNearestNavArea(vPos, 1000.0));
+		return view_as<TerrorNavArea>(L4D_GetNearestNavArea(vPos));
 	}
 	property int m_spawnAttributes {
 		public get() { return LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iOffs_SpawnAttributes), NumberType_Int32); }

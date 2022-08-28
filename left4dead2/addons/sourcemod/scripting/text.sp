@@ -6,17 +6,19 @@
 #include <steamworks>
 
 //#include <smlib>
-#define PLUGIN_VERSION	"2022-07"
+//#define PLUGIN_VERSION	"2022-08"
 new Handle: g_hCvarInfectedTime = INVALID_HANDLE;
 new Handle: g_hCvarInfectedLimit = INVALID_HANDLE;
 new Handle: g_hCvarTankBhop = INVALID_HANDLE;
 new Handle: g_hCvarWeapon = INVALID_HANDLE;
+new Handle: g_hCvarPluginVersion = INVALID_HANDLE;
 new Handle:hCvarCoop;
 new CommonLimit; 
 new CommonTime; 
 new TankBhop;
 new Weapon;
 new MaxPlayers;
+char PLUGIN_VERSION[32];
 //String:sBuffer[256];
 public OnPluginStart()
 {
@@ -24,10 +26,12 @@ public OnPluginStart()
 	g_hCvarInfectedLimit = FindConVar("l4d_infected_limit");
 	g_hCvarTankBhop = FindConVar("ai_Tank_Bhop");
 	g_hCvarWeapon = CreateConVar("ZonemodWeapon", "0", "", 0, false, 0.0, false, 0.0);
+	g_hCvarPluginVersion = CreateConVar("AnnePluginVersion", "Latest", "Anne插件版本");
 	HookConVarChange(g_hCvarInfectedTime, Cvar_InfectedTime);
 	HookConVarChange(g_hCvarInfectedLimit, Cvar_InfectedLimit);
 	HookConVarChange(g_hCvarTankBhop, CvarTankBhop);
 	HookConVarChange(g_hCvarWeapon, CvarWeapon);
+	HookConVarChange(g_hCvarPluginVersion, CvarPluginVersion);
 	CommonTime = GetConVarInt(g_hCvarInfectedTime);
 	CommonLimit = GetConVarInt(g_hCvarInfectedLimit);
 	TankBhop = GetConVarInt(g_hCvarTankBhop);
@@ -75,7 +79,7 @@ public Action:killall(client, args)
 
 public Incap_Event(Handle:event, const String:name[], bool:dontBroadcast)
 {
-    new Incap = GetClientOfUserId(GetEventInt(event, "userid"));
+	new Incap = GetClientOfUserId(GetEventInt(event, "userid"));
 	if(bool:GetConVarBool(hCvarCoop))
 	{
 		ForcePlayerSuicide(Incap);
@@ -98,9 +102,11 @@ public Cvar_InfectedTime( Handle:cvar, const String:oldValue[], const String:new
 public Cvar_InfectedLimit( Handle:cvar, const String:oldValue[], const String:newValue[] ) 
 {
 	CommonLimit = GetConVarInt(g_hCvarInfectedLimit);
-	if (Weapon == 2 && CommonLimit<10)
+	char tags[64];
+	GetConVarString(FindConVar("sv_tags"), tags, sizeof(tags));
+	if (Weapon == 2 && CommonLimit< 10 && (StrContains(tags, "anne", false) != -1 || StrContains(tags, "allcharger", false) != -1 || StrContains(tags, "witchparty", false) != -1))
 	{
-		ServerCommand("exec vote/weapon/zonedmod.cfg");
+		ServerCommand("sm_cvar ZonemodWeapon 0");
 		PrintToChatAll("\x03因为不超过10特，AnneHappy+武器已经自动切换为AnneHappy武器");
 	}
 }
@@ -108,9 +114,18 @@ public CvarTankBhop( Handle:cvar, const String:oldValue[], const String:newValue
 {
 	TankBhop = GetConVarInt(g_hCvarTankBhop);
 }
+
+public CvarPluginVersion( Handle:cvar, const String:oldValue[], const String:newValue[] ) 
+{
+	strcopy(PLUGIN_VERSION, sizeof(PLUGIN_VERSION), newValue);
+}
+
+
 public CvarWeapon( Handle:cvar, const String:oldValue[], const String:newValue[] ) 
 {
 	Weapon = GetConVarInt(g_hCvarWeapon);
+	char tags[64];
+	GetConVarString(FindConVar("sv_tags"), tags, sizeof(tags));
 	if (Weapon == 1)
 	{
 		ServerCommand("exec vote/weapon/zonedmod.cfg");
@@ -121,7 +136,7 @@ public CvarWeapon( Handle:cvar, const String:oldValue[], const String:newValue[]
 	}
 	else if (Weapon == 2)
 	{
-		if(CommonLimit >= 10)
+		if(CommonLimit >= 10 || (StrContains(tags, "alone", false) != -1) || (StrContains(tags, "1vht", false) != -1))
 			ServerCommand("exec vote/weapon/AnneHappyPlus.cfg");
 		else
 		{
@@ -313,10 +328,10 @@ stock bool:Survivor(i)
 stock bool:Incapacitated(client)
 {
     new bool:bIsIncapped = false;
-	if (Survivor(client)) 
+    if (Survivor(client)) 
 	{
 		if (GetEntProp(client, Prop_Send, "m_isIncapacitated") > 0) bIsIncapped = true;
 		if (!IsPlayerAlive(client)) bIsIncapped = true;
 	}
-	return bIsIncapped;
+    return bIsIncapped;
 }

@@ -45,8 +45,8 @@ public void OnPluginStart()
 	tongue_drag_first_damage_interval = CreateConVar("tongue_drag_first_damage_interval", "-1.0", "After how many seconds do we apply our first tick of damage? | 0.0 to Disable.");
 	tongue_drag_first_damage = CreateConVar("tongue_drag_first_damage", "3.0", "How much damage do we apply on the first tongue hit? | Only applies when first_damage_interval is used");
 
-	ConVar tongue_choke_damage_amount = FindConVar("tongue_choke_damage_amount");
-	tongue_choke_damage_amount.AddChangeHook(tongue_choke_damage_amount_ValueChanged);
+	//ConVar tongue_choke_damage_amount = FindConVar("tongue_choke_damage_amount");
+	//tongue_choke_damage_amount.AddChangeHook(tongue_choke_damage_amount_ValueChanged);
 }
 
 void InitGameData()
@@ -68,10 +68,12 @@ void InitGameData()
 	delete hGamedata;
 }
 
+/*
 public void tongue_choke_damage_amount_ValueChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	SetConVarInt(convar, 1); // hack-hack: game tries to change this cvar for some reason, can't be arsed so HARDCODETHATSHIT
 }
+*/
 
 public void OnTongueGrab(Event hEvent, const char[] name, bool dontBroadcast)
 {

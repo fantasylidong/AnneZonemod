@@ -1,653 +1,369 @@
 #pragma semicolon 1
 #pragma newdecls required
-
-// 头文件
 #include <sourcemod>
 #include <sdktools>
-#include <left4dhooks>
 
-enum AimType
+ConVar
+	g_hLungeInterval,
+	g_hFastPounceProximity,
+	g_hPounceVerticalAngle,
+	g_hPounceAngleMean,
+	g_hPounceAngleStd,
+	g_hStraightPounceProximity,
+	g_hAimOffsetSensitivityHunter,
+	g_hWallDetectionDistance;
+
+float
+	g_fLungeInterval,
+	g_fFastPounceProximity,
+	g_fPounceVerticalAngle,
+	g_fPounceAngleMean,
+	g_fPounceAngleStd,
+	g_fStraightPounceProximity,
+	g_fWallDetectionDistance,
+	g_fAimOffsetSensitivityHunter,
+	g_fCanLungeTime[MAXPLAYERS + 1];
+
+bool
+	g_bHasQueuedLunge[MAXPLAYERS + 1];
+
+public Plugin myinfo =
 {
-	AimEye,
-	AimBody,
-	AimChest
+	name = "AI HUNTER",
+	author = "Breezy",
+	description = "Improves the AI behaviour of special infected",
+	version = "1.0",
+	url = "github.com/breezyplease"
 };
 
-public Plugin myinfo = 
-{
-	name 			= "Ai-Hunter增强",
-	author 			= "Breezy，High Cookie，Standalone，Newteee，cravenge，Harry，Sorallll，PaimonQwQ，夜羽真白,东",
-	description 	= "觉得Ai-Hunter不够强？ Try this！",
-	version 		= "22-4-24",
-	url 			= "https://steamcommunity.com/id/saku_ra/"
-}
-
-// ConVars
-ConVar g_hHunterFastPounceDistance, g_hPounceVerticalAngle, g_hPounceAngleMean, g_hPounceAngleStd, g_hStraightPounceDistance, g_hHunterAimOffset, g_hWallPounceDistance, g_hHunterTarget, g_hShotGunCheckRange
-, g_hMeleeAvoid;
-// Ints
-int g_iPounceVerticalAngle, g_iPounceAngleMean, g_iPounceAngleStd, g_iHunterAimOffset, g_iHunterTarget, g_iShotgunPlayer = -1, g_iMobileSurvivor = 0;
-// Floats
-float g_fHunterFastPounceDistance, g_fStraightPounceDistance, g_fWallPounceDistance, g_fShotGunCheckRange;
-// Bools
-bool g_bMeleeAvoid = false, g_bHasQueuedLunge[MAXPLAYERS + 1], g_bCanLunge[MAXPLAYERS + 1];
-
-#define TEAM_SURVIVOR 2
-#define TEAM_INFECTED 3
-#define ZC_HUNTER 3
-#define POSITIVE 0
-#define NEGETIVE 1
-#define X 0
-#define Y 1
-#define Z 2
-
 public void OnPluginStart()
-{
-	// CreateConVar
-	g_hHunterFastPounceDistance = CreateConVar("ai_HunterFastPounceDistance", "2000", "在距离目标多近Hunter开始快速突袭", FCVAR_NOTIFY, true, 0.0);
-	g_hPounceVerticalAngle = CreateConVar("ai_HunterPounceVerticalAngle", "6", "Hunter突袭的垂直角度限制", FCVAR_NOTIFY, true, 0.0, true, 90.0);
-	g_hPounceAngleMean = CreateConVar("ai_HunterPounceAngleMean", "10", "Hunter突袭的平均角度（由随机数发生器产生）", FCVAR_NOTIFY, true, 0.0, true, 90.0);
-	g_hPounceAngleStd = CreateConVar("ai_HunterPounceAngleStd", "20", "Hunter突袭角度与平均角度的偏差（由随机数发生器产生）", FCVAR_NOTIFY, true, 0.0);
-	g_hStraightPounceDistance = CreateConVar("ai_HunterStraightPounceDistance", "200.0", "Hunter在离生还者多近时允许直扑", FCVAR_NOTIFY, true, 0.0);
-	g_hHunterAimOffset = CreateConVar("ai_HunterAimOffset", "360", "目标与Hunter处在这一角度范围内，Hunter将不会直扑", FCVAR_NOTIFY, true, 0.0, true, 360.0);
-	g_hWallPounceDistance = CreateConVar("ai_HunterWallDetectDistance", "-1", "在这个范围内，Hunter突袭时将会优先检测是否有墙体", FCVAR_NOTIFY);
-	g_hHunterTarget = CreateConVar("ai_HunterTarget", "1", "Hunter目标选择：1=自然目标选择，2=最近目标，3=手持非霰弹枪的生还者", FCVAR_NOTIFY, true, 1.0, true, 3.0);
-	g_hMeleeAvoid = CreateConVar("ai_HunterMeleeAvoid", "0", "Hunter是否回避手持近战的玩家", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	g_hShotGunCheckRange = CreateConVar("ai_HunterShotGunCheckRange", "250.0", "目标选择为3时，Hunter在大于这个距离时允许进行目标枪械检测", FCVAR_NOTIFY, true, 0.0);
-	// HookEvents
-	HookEvent("player_spawn", evt_PlayerSpawn);
-	HookEvent("ability_use", evt_AbilityUse);
-	// AddChangeHook
-	g_hHunterFastPounceDistance.AddChangeHook(ConVarChanged_Cvars);
-	g_hPounceVerticalAngle.AddChangeHook(ConVarChanged_Cvars);
-	g_hPounceAngleMean.AddChangeHook(ConVarChanged_Cvars);
-	g_hPounceAngleStd.AddChangeHook(ConVarChanged_Cvars);
-	g_hStraightPounceDistance.AddChangeHook(ConVarChanged_Cvars);
-	g_hHunterAimOffset.AddChangeHook(ConVarChanged_Cvars);
-	g_hWallPounceDistance.AddChangeHook(ConVarChanged_Cvars);
-	g_hHunterTarget.AddChangeHook(ConVarChanged_Cvars);
-	g_hShotGunCheckRange.AddChangeHook(ConVarChanged_Cvars);
-	g_hMeleeAvoid.AddChangeHook(ConVarChanged_Cvars);
-	// GetCvars
-	GetCvars();
+{	
+	g_hFastPounceProximity = CreateConVar("ai_fast_pounce_proximity", "1000.0", "At what distance to start pouncing fast");
+	g_hPounceVerticalAngle = CreateConVar("ai_pounce_vertical_angle", "7.0", "Vertical angle to which AI hunter pounces will be restricted");
+	g_hPounceAngleMean = CreateConVar("ai_pounce_angle_mean", "10.0", "Mean angle produced by Gaussian RNG");
+	g_hPounceAngleStd = CreateConVar("ai_pounce_angle_std", "20.0", "One standard deviation from mean as produced by Gaussian RNG");
+	g_hStraightPounceProximity = CreateConVar("ai_straight_pounce_proximity", "200.0", "Distance to nearest survivor at which hunter will consider pouncing straight");
+	g_hAimOffsetSensitivityHunter = CreateConVar("ai_aim_offset_sensitivity_hunter", "180.0", "If the hunter has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hWallDetectionDistance = CreateConVar("ai_wall_detection_distance", "-1.0", "How far in front of himself infected bot will check for a wall. Use '-1' to disable feature");
+	g_hLungeInterval = FindConVar("z_lunge_interval");
+
+	FindConVar("hunter_pounce_ready_range").SetFloat(2000.0);
+	FindConVar("hunter_pounce_max_loft_angle").SetFloat(0.0);
+	FindConVar("hunter_leap_away_give_up_range").SetFloat(0.0);
+	FindConVar("z_pounce_silence_range").SetFloat(999999.0);
+	FindConVar("hunter_committed_attack_range").SetFloat(999999.0);
+	FindConVar("z_pounce_crouch_delay").SetFloat(0.1);
+
+	g_hLungeInterval.AddChangeHook(vConVarChanged);
+	g_hFastPounceProximity.AddChangeHook(vConVarChanged);
+	g_hPounceVerticalAngle.AddChangeHook(vConVarChanged);
+	g_hPounceAngleMean.AddChangeHook(vConVarChanged);
+	g_hPounceAngleStd.AddChangeHook(vConVarChanged);
+	g_hStraightPounceProximity.AddChangeHook(vConVarChanged);
+	g_hAimOffsetSensitivityHunter.AddChangeHook(vConVarChanged);
+	g_hWallDetectionDistance.AddChangeHook(vConVarChanged);
+	
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("ability_use", Event_AbilityUse);
 }
 
-void ConVarChanged_Cvars(ConVar convar, const char[] oldValue, const char[] newValue)
+public void OnPluginEnd()
 {
-	GetCvars();
+	FindConVar("hunter_committed_attack_range").RestoreDefault();
+	FindConVar("hunter_pounce_ready_range").RestoreDefault();
+	FindConVar("hunter_leap_away_give_up_range").RestoreDefault();
+	FindConVar("hunter_pounce_max_loft_angle").RestoreDefault();
+	FindConVar("z_pounce_crouch_delay").RestoreDefault();
 }
 
-void GetCvars()
+public void OnConfigsExecuted()
 {
-	g_fHunterFastPounceDistance = g_hHunterFastPounceDistance.FloatValue;
-	g_iPounceVerticalAngle = g_hPounceVerticalAngle.IntValue;
-	g_iPounceAngleMean = g_hPounceAngleMean.IntValue;
-	g_iPounceAngleStd = g_hPounceAngleStd.IntValue;
-	g_fStraightPounceDistance = g_hStraightPounceDistance.FloatValue;
-	g_iHunterAimOffset = g_hHunterAimOffset.IntValue;
-	g_fWallPounceDistance = g_hWallPounceDistance.FloatValue;
-	g_iHunterTarget = g_hHunterTarget.IntValue;
-	g_fShotGunCheckRange = g_hShotGunCheckRange.FloatValue;
-	g_bMeleeAvoid = g_hMeleeAvoid.BoolValue;
+	vGetCvars();
 }
 
-public Action OnPlayerRunCmd(int hunter, int& buttons, int& impulse, float vel[3], float eyeAngles[3], int& weapon)
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	if (IsAiHunter(hunter))
+	vGetCvars();
+}
+
+void vGetCvars()
+{
+	g_fLungeInterval = g_hLungeInterval.FloatValue;
+	g_fFastPounceProximity = g_hFastPounceProximity.FloatValue;
+	g_fPounceVerticalAngle = g_hPounceVerticalAngle.FloatValue;
+	g_fPounceAngleMean = g_hPounceAngleMean.FloatValue;
+	g_fPounceAngleStd = g_hPounceAngleStd.FloatValue;
+	g_fStraightPounceProximity = g_hStraightPounceProximity.FloatValue;
+	g_fAimOffsetSensitivityHunter = g_hAimOffsetSensitivityHunter.FloatValue;
+	g_fWallDetectionDistance = g_hWallDetectionDistance.FloatValue;
+}
+
+public void OnMapEnd()
+{
+	for(int i = 1; i <= MaxClients; i++)
+		g_fCanLungeTime[i] = 0.0;
+}
+
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+{
+	for(int i = 1; i <= MaxClients; i++)
+		g_fCanLungeTime[i] = 0.0;
+}
+
+void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	g_fCanLungeTime[client] = 0.0;
+	g_bHasQueuedLunge[client] = false;
+}
+
+void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if(!client || !IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+		return;
+	
+	static char sAbility[16];
+	event.GetString("ability", sAbility, sizeof(sAbility));
+	if(strcmp(sAbility, "ability_lunge") == 0)
+		vHunter_OnPounce(GetClientOfUserId(event.GetInt("userid")));
+}
+
+public Action OnPlayerRunCmd(int client, int &buttons)
+{
+	if(!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost") == 1 || GetEntPropEnt(client, Prop_Send, "m_pounceVictim") > 0)
+		return Plugin_Continue;
+
+	buttons &= ~IN_ATTACK2;
+	
+	static int flags;
+	flags = GetEntityFlags(client);
+	if(flags & FL_DUCKING && flags & FL_ONGROUND && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 	{
-		if (GetEntPropEnt(hunter, Prop_Send, "m_pounceVictim") > 0)
-			return Plugin_Continue;
-		buttons &= ~IN_ATTACK2;
-		int iFlags = GetEntityFlags(hunter);
-		float fDistance = NearestSurvivorDistance(hunter);
-		float fHunterPos[3] = {0.0}, fTargetAngles[3] = {0.0};
-		GetClientAbsOrigin(hunter, fHunterPos);
-		int iTarget = GetClientAimTarget(hunter, true);
-		bool bHasSight = view_as<bool>(GetEntProp(hunter, Prop_Send, "m_hasVisibleThreats"));
-		if (IsSurvivor(iTarget) && GetEntProp(hunter, Prop_Send, "m_isAttemptingToPounce") && bHasSight)
+		static float vPos[3];
+		GetClientAbsOrigin(client, vPos);
+		if(fNearestSurvivorDistance(client, vPos) < g_fFastPounceProximity)
 		{
-			ComputeAimAngles(hunter, iTarget, fTargetAngles, AimChest);
-			fTargetAngles[2] = 0.0;
-			TeleportEntity(hunter, NULL_VECTOR, fTargetAngles, NULL_VECTOR);
-		}
-		if ((iFlags & FL_DUCKING) && (iFlags & FL_ONGROUND) && bHasSight)
-		{
-			if (fDistance < g_fHunterFastPounceDistance)
+			buttons &= ~IN_ATTACK;			
+			if(!g_bHasQueuedLunge[client])
 			{
-				buttons &= ~IN_ATTACK;
-				if (!g_bHasQueuedLunge[hunter])
-				{
-					g_bCanLunge[hunter] = false;
-					g_bHasQueuedLunge[hunter] = true;
-					CreateTimer(GetConVarFloat(FindConVar("z_lunge_interval")), Timer_LungeInterval, hunter, TIMER_FLAG_NO_MAPCHANGE);
-				}
-				else if (g_bCanLunge[hunter])
-				{
-					buttons |= IN_ATTACK;
-					g_bHasQueuedLunge[hunter] = false;
-				}
+				g_bHasQueuedLunge[client] = true;
+				g_fCanLungeTime[client] = GetGameTime() + g_fLungeInterval;
 			}
-		}
-		if (GetEntityMoveType(hunter) & MOVETYPE_LADDER)
-		{
-			buttons &= ~IN_JUMP;
-			buttons &= ~IN_DUCK;
-		}
+			else if(g_fCanLungeTime[client] < GetGameTime())
+			{
+				buttons |= IN_ATTACK;
+				g_bHasQueuedLunge[client] = false;
+			}
+		}	
 	}
+
 	return Plugin_Changed;
 }
 
-public Action Timer_LungeInterval(Handle timer, int client)
+float fNearestSurvivorDistance(int client, const float vOrigin[3])
 {
-	g_bCanLunge[client] = true;
-}
+	static int i;
+	static int iCount;
+	static float vTarg[3];
+	static float fDistance[MAXPLAYERS + 1];
 
-public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
-{
-	if (IsAiHunter(specialInfected))
-	{
-		if (GetEntPropEnt(specialInfected, Prop_Send, "m_pounceVictim") > 0)
-			return Plugin_Continue;
-		float fSelfPos[3];
-		GetClientAbsOrigin(specialInfected, fSelfPos);
-		if (IsSurvivor(curTarget))
-		{
-			float fTargetPos[3], fDistance;
-			GetClientAbsOrigin(curTarget, fTargetPos);
-			fDistance = GetVectorDistance(fSelfPos, fTargetPos);
-			if (IsPinned(curTarget) || IsIncapped(curTarget))
-			{
-				curTarget = GetClosestSurvivor(fSelfPos, curTarget);
-				if (IsSurvivor(curTarget))
-				{
-					return Plugin_Changed;
-				}
-			}
-			// 近战回避，目标拿着近战且团队中不是所有人都拿着近战，选择其他目标
-			if (g_bMeleeAvoid && ClientMeleeCheck(curTarget) && TeamMeleeCheck() != g_iMobileSurvivor)
-			{
-				g_iMobileSurvivor = 0;
-				curTarget = GetClosestSurvivor(fSelfPos, curTarget);
-				if (IsSurvivor(curTarget))
-				{
-					return Plugin_Changed;
-				}
-			}
-			else
-			{
-				g_iMobileSurvivor = 0;
-			}
-			// 选择 hunter 目标
-			switch (g_iHunterTarget)
-			{
-				case 2:
-				{
-					int nearesttarget = GetClosestSurvivor(fSelfPos);
-					if (IsSurvivor(nearesttarget))
-					{
-						curTarget = nearesttarget;
-						return Plugin_Changed;
-					}
-				}
-				case 3:
-				{
-					if (fDistance > g_fShotGunCheckRange)
-					{
-						// 团队中所有人（未被控，未倒地，未死亡）都拿着霰弹枪，随机选择最近目标，如果目标有效则改变目标，如果目标无效则重新执行上面的选择有效目标
-						// 时间复杂度有些高，为 O(n)^3
-						if (TeamShotgunCheck() == g_iMobileSurvivor)
-						{
-							g_iMobileSurvivor = 0;
-							int nearesttarget = GetClosestSurvivor(fSelfPos);
-							if (IsSurvivor(curTarget))
-							{
-								curTarget = nearesttarget;
-								return Plugin_Changed;
-							}
-						}
-						else
-						{
-							g_iMobileSurvivor = 0;
-						}
-						if (IsSurvivor(curTarget) && IsPlayerAlive(curTarget) && !IsPinned(curTarget) && !IsIncapped(curTarget))
-						{
-							// 检测目标是否手持霰弹枪
-							int iActiveWeapon = GetEntPropEnt(curTarget, Prop_Send, "m_hActiveWeapon");
-							if (IsValidEntity(iActiveWeapon) && IsValidEdict(iActiveWeapon))
-							{
-								char sWeaponName[64];
-								GetEdictClassname(iActiveWeapon, sWeaponName, sizeof(sWeaponName));
-								if ((strcmp(sWeaponName, "weapon_shotgun_spas") == 0) || (strcmp(sWeaponName, "weapon_autoshotgun") == 0) || (strcmp(sWeaponName, "weapon_pumpshotgun") == 0) || (strcmp(sWeaponName, "weapon_shotgun_chrome") == 0))
-								{
-									g_iShotgunPlayer = curTarget;
-									int newtarget = GetClosestSurvivor(fSelfPos, g_iShotgunPlayer);
-									if (IsSurvivor(newtarget))
-									{
-										curTarget = newtarget;
-										return Plugin_Changed;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	return Plugin_Continue;
-}
-
-int TeamShotgunCheck()
-{
-	int iTeamShotgunCount = 0;
-	for (int client = 1; client <= MaxClients; client++)
-	{
-		if (IsSurvivor(client) && IsPlayerAlive(client) && !IsPinned(client) && !IsIncapped(client))
-		{
-			g_iMobileSurvivor += 1;
-			int iActiveWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-			if (IsValidEntity(iActiveWeapon) && IsValidEdict(iActiveWeapon))
-			{
-				char sWeaponName[64];
-				GetEdictClassname(iActiveWeapon, sWeaponName, sizeof(sWeaponName));
-				if ((strcmp(sWeaponName, "weapon_shotgun_spas") == 0) || (strcmp(sWeaponName, "weapon_autoshotgun") == 0) || (strcmp(sWeaponName, "weapon_pumpshotgun") == 0) || (strcmp(sWeaponName, "weapon_shotgun_chrome") == 0))
-				{
-					iTeamShotgunCount += 1;
-				}
-			}
-		}
-	}
-	return iTeamShotgunCount;
-}
-
-bool ClientMeleeCheck(int client = -1)
-{
-	if (client != -1)
-	{
-		int activeweapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-		if (IsValidEntity(activeweapon) && IsValidEdict(activeweapon))
-		{
-			char classname[64] = '\0';
-			GetEdictClassname(activeweapon, classname, sizeof(classname));
-			if (strcmp(classname[7], "melee") == 0 || strcmp(classname, "weapon_chainsaw") == 0)
-			{
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-int TeamMeleeCheck()
-{
-	int teammeleenum = 0;
-	for (int client = 1; client <= MaxClients; client++)
-	{
-		if (IsSurvivor(client) && !IsIncapped(client) && IsPlayerAlive(client) && !IsPinned(client))
-		{
-			g_iMobileSurvivor += 1;
-			int activeweapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-			if (IsValidEntity(activeweapon) && IsValidEdict(activeweapon))
-			{
-				char classname[64];
-				GetEdictClassname(activeweapon, classname, sizeof(classname));
-				if (strcmp(classname[7], "melee") == 0 || strcmp(classname, "weapon_chainsaw") == 0)
-				{
-					teammeleenum += 1;
-				}
-			}
-		}
-	}
-	return teammeleenum;
-}
-
-bool IsPinned(int client)
-{
-	bool bIsPinned = false;
-	if (IsSurvivor(client))
-	{
-		if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0) bIsPinned = true;
-		if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0) bIsPinned = true;
-		if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0) bIsPinned = true;
-		if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0) bIsPinned = true;
-		if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0) bIsPinned = true;
-	}		
-	return bIsPinned;
-}
-
-// ***** 事件 *****
-public void evt_PlayerSpawn(Event event, const char[] name, bool dontBroadCast)
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (IsAiHunter(client))
-	{
-		g_bHasQueuedLunge[client] = false;
-	}
-}
-
-public void evt_AbilityUse(Event event, const char[] name, bool dontBroadCast)
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (IsAiHunter(client))
-	{
-		static char sAbility[16];
-		event.GetString("ability", sAbility, sizeof(sAbility));
-		if (strcmp(sAbility, "ability_lunge") == 0)
-		{
-			Hunter_OnPounce(client);
-		}
-	}
-}
-
-public Action Hunter_OnPounce(int hunter)
-{
-	if(IsPinningSomeone(hunter))
-			return Plugin_Continue;
-	float fLungeVector[3];
-	int iEntLunge = GetEntPropEnt(hunter, Prop_Send, "m_customAbility");
-	GetEntPropVector(iEntLunge, Prop_Send, "m_queuedLunge", fLungeVector);
-	// 如果周围有墙体，则优先选择弹墙
-	float fHunterPos[3], fHunterAngles[3];
-	GetClientAbsOrigin(hunter, fHunterPos);
-	GetClientEyeAngles(hunter, fHunterAngles);
-	TR_TraceRayFilter(fHunterPos, fHunterAngles, MASK_PLAYERSOLID, RayType_Infinite, TracerayFilter, hunter);
-	float fImpactPos[3];
-	TR_GetEndPosition(fImpactPos);
-	// 如果撞到物体
-	if (GetVectorDistance(fHunterPos, fImpactPos) < g_fWallPounceDistance)
-	{
-		if (GetRandomInt(0, 1))
-		{
-			AngleLunge(iEntLunge, 45.0);
-		}
-		else
-		{
-			AngleLunge(iEntLunge, 315.0);
-		}
-	}
-	else
-	{
-		float fDistance = NearestSurvivorDistance(hunter);
-		if (IsTargetWatchingAttacker(hunter, g_iHunterAimOffset) && fDistance > g_fStraightPounceDistance)
-		{
-			float fPounceAngle = GaussianRNG(float(g_iPounceAngleMean), float(g_iPounceAngleStd));
-			AngleLunge(iEntLunge, fPounceAngle);
-			LimitLungeVerticality(iEntLunge);
-			return Plugin_Changed;
-		}
-	}
-	return Plugin_Continue;
-}
-
-bool TracerayFilter(int impactEntity, int contentMask, int rayOriginEntity)
-{
-	return view_as<bool>(impactEntity > MaxClients && impactEntity != rayOriginEntity);
-}
-
-bool IsPinningSomeone(int client)
-{
-	bool bIsPinning = false;
-	if (IsInfectedBot(client))
-	{
-		if (GetEntPropEnt(client, Prop_Send, "m_tongueVictim") > 0) bIsPinning = true;
-		if (GetEntPropEnt(client, Prop_Send, "m_jockeyVictim") > 0) bIsPinning = true;
-		if (GetEntPropEnt(client, Prop_Send, "m_pounceVictim") > 0) bIsPinning = true;
-		if (GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0) bIsPinning = true;
-		if (GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0) bIsPinning = true;
-	}
-	return bIsPinning;
-}
-
-bool IsInfectedBot(int client)
-{
-	if (client > 0 && client <= MaxClients && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_INFECTED)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-void AngleLunge(int LungeEntity, float turnAngle)
-{
-	float LungeVector[3];
-	GetEntPropVector(LungeEntity, Prop_Send, "m_queuedLunge", LungeVector);
-	float x = LungeVector[X];
-	float y = LungeVector[Y];
-	float z = LungeVector[Z];
-	turnAngle = DegToRad(turnAngle);
-	float fForceLunge[3];
-	fForceLunge[X] = x * Cosine(turnAngle) - y * Sine(turnAngle);
-	fForceLunge[Y] = x * Sine(turnAngle) + y * Cosine(turnAngle);
-	fForceLunge[Z] = z;
-	SetEntPropVector(LungeEntity, Prop_Send, "m_queuedLunge", fForceLunge);
-}
-
-void LimitLungeVerticality(int LungeEntity)
-{
-	float vertAngle = float(g_iPounceVerticalAngle);
-	float LungeVector[3];
-	GetEntPropVector(LungeEntity, Prop_Send, "m_queuedLunge", LungeVector);
-	float x = LungeVector[X];
-	float y = LungeVector[Y];
-	float z = LungeVector[Z];
-	vertAngle = DegToRad(vertAngle);
-	float fFlatLunge[3];
-	fFlatLunge[Y] = y * Cosine(vertAngle) - z * Sine(vertAngle);
-	fFlatLunge[Z] = y * Sine(vertAngle) + z * Cosine(vertAngle);
-	fFlatLunge[X] = x * Cosine(vertAngle) + z * Sine(vertAngle);
-	fFlatLunge[Z] = x * -Sine(vertAngle) + z * Cosine(vertAngle);
-	SetEntPropVector(LungeEntity, Prop_Send, "m_queuedLunge", fFlatLunge);
-}
-
-float GaussianRNG(float mean, float std)
-{
-	float fChanceToken = GetRandomFloat(0.0, 1.0);
-	int iSignBit;
-	if (fChanceToken > 0.5)
-	{
-		iSignBit = POSITIVE;
-	}
-	else
-	{
-		iSignBit = NEGETIVE;
-	}
-	float x1, x2, w;
-	do
-	{
-		float rand1 = GetRandomFloat(0.0, 1.0);
-		float rand2 = GetRandomFloat(0.0, 1.0);
-		x1 = 2.0 * rand1 - 1.0;
-		x2 = 2.0 * rand2 - 1.0;
-		w = x1 * x1 + x2 * x2;
-	} while (w >= 1.0);
-	static float e = 2.71828;
-	w = SquareRoot(-2.0 * (Logarithm(w, e) / w));
-	float y1 = x1 * w;
-	float y2 = x2 * w;
-	float z1 = y1 * std + mean;
-	float z2 = y2 * std - mean;
-	if (iSignBit == NEGETIVE)
-	{
-		return z1;
-	}
-	else
-	{
-		return z2;
-	}
-}
-
-// ***** 方法 *****
-bool IsAiHunter(int client)
-{
-	if (client && client <= MaxClients && IsClientInGame(client) && IsPlayerAlive(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_INFECTED && GetEntProp(client, Prop_Send, "m_zombieClass") == ZC_HUNTER && GetEntProp(client, Prop_Send, "m_isGhost") != 1)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-
-bool IsSurvivor(int client)
-{
-	if (client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVOR)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-
-bool IsIncapped(int client)
-{
-    return view_as<bool>(GetEntProp(client, Prop_Send, "m_isIncapacitated"));
-}
-
-float NearestSurvivorDistance(int client)
-{
-	static int i, iCount;
-	static float vPos[3], vTargetPos[3], fDistance[MAXPLAYERS + 1];
 	iCount = 0;
-	GetClientAbsOrigin(client, vPos);
-	for (i = 1; i <= MaxClients; i++)
+
+	for(i = 1; i <= MaxClients; i++)
 	{
-		if (i != client && IsClientInGame(i) && GetClientTeam(i) == TEAM_SURVIVOR && IsPlayerAlive(i))
+		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
-			GetClientAbsOrigin(i, vTargetPos);
-			fDistance[iCount++] = GetVectorDistance(vPos, vTargetPos);
+			GetClientAbsOrigin(i, vTarg);
+			fDistance[iCount++] = GetVectorDistance(vOrigin, vTarg);
 		}
 	}
-	if (iCount == 0)
-	{
+
+	if(iCount == 0)
 		return -1.0;
-	}
+
 	SortFloats(fDistance, iCount, Sort_Ascending);
 	return fDistance[0];
 }
 
-bool IsTargetWatchingAttacker(int attacker, int offset)
+bool bIsBotHunter(int client)
 {
-	bool bIsWatching = true;
-	if (GetClientTeam(attacker) == TEAM_INFECTED && IsPlayerAlive(attacker))
-	{
-		int iTarget = GetClientAimTarget(attacker);
-		if (IsSurvivor(iTarget))
-		{
-			int iOffset = RoundToNearest(GetPlayerAimOffset(iTarget, attacker));
-			if (iOffset <= offset)
-			{
-				bIsWatching = true;
-			}
-			else
-			{
-				bIsWatching = false;
-			}
-		}
-	}
-	return bIsWatching;
+	return client && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 3;
 }
 
-float GetPlayerAimOffset(int attacker, int target)
-{
-	if (IsClientConnected(attacker) && IsClientInGame(attacker) && IsPlayerAlive(attacker) && IsClientConnected(target) && IsClientInGame(target) && IsPlayerAlive(target))
-	{
-		float fAttackerPos[3], fTargetPos[3], fAimVector[3], fDirectVector[3], fResultAngle;
-		GetClientEyeAngles(attacker, fAimVector);
-		fAimVector[0] = fAimVector[2] = 0.0;
-		GetAngleVectors(fAimVector, fAimVector, NULL_VECTOR, NULL_VECTOR);
-		NormalizeVector(fAimVector, fAimVector);
-		// 获取目标位置
-		GetClientAbsOrigin(target, fTargetPos);
-		GetClientAbsOrigin(attacker, fAttackerPos);
-		fAttackerPos[2] = fTargetPos[2] = 0.0;
-		MakeVectorFromPoints(fAttackerPos, fTargetPos, fDirectVector);
-		NormalizeVector(fDirectVector, fDirectVector);
-		// 计算角度
-		fResultAngle = RadToDeg(ArcCosine(GetVectorDotProduct(fAimVector, fDirectVector)));
-		return fResultAngle;
-	}
-	return -1.0;
-}
+void vHunter_OnPounce(int client)
+{	
+	if(!bIsBotHunter(client))
+		return;
 
-int GetClosestSurvivor(float refpos[3], int excludeSur = -1)
-{
-	float surPos[3];	int closetSur = GetRandomMobileSurvivor();
-	if (closetSur == 0)
+	static int iLunge;
+	static float vPos[3];
+	GetClientAbsOrigin(client, vPos);
+	if(g_fWallDetectionDistance > 0.0 && bHitWall(client, vPos))
 	{
-		return 0;
-	}
-	GetClientAbsOrigin(closetSur, surPos);
-	int iClosetAbsDisplacement = RoundToNearest(GetVectorDistance(refpos, surPos));
-	for (int client = 1; client < MaxClients; client++)
-	{
-		if (IsSurvivor(client) && IsPlayerAlive(client) && !IsPinned(client) && !IsIncapped(client) && client != excludeSur)
-		{
-			GetClientAbsOrigin(client, surPos);
-			int iAbsDisplacement = RoundToNearest(GetVectorDistance(refpos, surPos));
-			if (iClosetAbsDisplacement < 0)
-			{
-				iClosetAbsDisplacement = iAbsDisplacement;
-				closetSur = client;
-			}
-			else if (iAbsDisplacement < iClosetAbsDisplacement)
-			{
-				iClosetAbsDisplacement = iAbsDisplacement;
-				closetSur = client;
-			}
-		}
-	}
-	return closetSur;
-}
-
-// 随机获取一个有效（未倒地，未死亡，未被控）的生还者，成功返回生还者 id，失败返回 0
-int GetRandomMobileSurvivor()
-{
-	int survivors[16] = {0}, index = 0;
-	for (int client = 1; client <= MaxClients; client++)
-	{
-		if (IsClientConnected(client) && IsClientInGame(client) && GetClientTeam(client) == TEAM_SURVIVOR && IsPlayerAlive(client) && !IsPinned(client) && !IsIncapped(client))
-		{
-			survivors[index] = client;
-			index += 1;
-		}
-	}
-	if (index > 0)
-	{
-		return survivors[GetRandomInt(0, index - 1)];
+		iLunge = GetEntPropEnt(client, Prop_Send, "m_customAbility");
+		if(GetRandomInt(0, 1))
+			vAngleLunge(iLunge, 45.0);
+		else
+			vAngleLunge(iLunge, 315.0);
 	}
 	else
-	{
-		return 0;
+	{	
+		if(bIsBeingWatched(client, g_fAimOffsetSensitivityHunter) && fNearestSurvivorDistance(client, vPos) > g_fStraightPounceProximity)
+		{
+			iLunge = GetEntPropEnt(client, Prop_Send, "m_customAbility");
+			vAngleLunge(iLunge, fGaussianRNG(g_fPounceAngleMean, g_fPounceAngleStd));
+			vLimitLungeVerticality(iLunge);				
+		}	
 	}
 }
 
-void ComputeAimAngles(int client, int target, float angles[3], AimType type = AimEye)
+bool bHitWall(int client, float vStart[3])
 {
-	if(client<0||client>MaxClients||target<0||target>MaxClients)
-		return;
-	float selfpos[3], targetpos[3], lookat[3];
-	GetClientEyePosition(client, selfpos);
-	switch (type)
+	vStart[2] += 20.0;
+
+	static float vAng[3];
+	static float vEnd[3];
+	GetClientEyeAngles(client, vAng);
+	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vAng, vAng);
+	vEnd = vAng;
+	ScaleVector(vEnd, g_fWallDetectionDistance);
+	AddVectors(vStart, vEnd, vEnd);
+
+	static Handle hTrace;
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 36.0}), MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
+	if(TR_DidHit(hTrace))
 	{
-		case AimEye:
+		static float vPlane[3];
+		TR_GetPlaneNormal(hTrace, vPlane);
+		NegateVector(vPlane);
+		NormalizeVector(vPlane, vPlane);
+		if(RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPlane))) < 30.0)
 		{
-			GetClientEyePosition(target, targetpos);
-		}
-		case AimBody:
-		{
-			GetClientAbsOrigin(target, targetpos);
-		}
-		case AimChest:
-		{
-			GetClientAbsOrigin(target, targetpos);
-			targetpos[2] += 45.0;
+			delete hTrace;
+			return true;
 		}
 	}
-	MakeVectorFromPoints(selfpos, targetpos, lookat);
-	GetVectorAngles(lookat, angles);
+	delete hTrace;
+	return false;
+}
+
+bool bTraceEntityFilter(int entity, int contentsMask)
+{
+	if(entity <= MaxClients)
+		return false;
+
+	static char classname[9];
+	GetEntityClassname(entity, classname, sizeof classname);
+	if((classname[0] == 'i' && strcmp(classname[1], "nfected") == 0) || (classname[0] == 'w' && strcmp(classname[1], "itch") == 0))
+		return false;
+
+	return true;
+}
+
+bool bIsBeingWatched(int client, float fOffsetThreshold)
+{
+	static int iTarget;
+	if(bIsAliveSurvivor((iTarget = GetClientAimTarget(client))) && fGetPlayerAimOffset(client, iTarget) > fOffsetThreshold)
+		return false;
+
+	return true;
+}
+
+float fGetPlayerAimOffset(int client, int iTarget)
+{
+	static float vAng[3];
+	static float vPos[3];
+	static float vDir[3];
+
+	GetClientEyeAngles(iTarget, vAng);
+	vAng[0] = vAng[2] = 0.0;
+	GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vAng, vAng);
+
+	GetClientAbsOrigin(client, vPos);
+	GetClientAbsOrigin(iTarget, vDir);
+	vPos[2] = vDir[2] = 0.0;
+	MakeVectorFromPoints(vDir, vPos, vDir);
+	NormalizeVector(vDir, vDir);
+
+	return RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vDir)));
+}
+
+void vAngleLunge(int iLunge, float fTurnAngle)
+{	
+	static float vLunge[3];
+	GetEntPropVector(iLunge, Prop_Send, "m_queuedLunge", vLunge);
+
+	fTurnAngle = DegToRad(fTurnAngle);
+
+	static float vForcedLunge[3];
+	vForcedLunge[0] = vLunge[0] * Cosine(fTurnAngle) - vLunge[1] * Sine(fTurnAngle);
+	vForcedLunge[1] = vLunge[0] * Sine(fTurnAngle) + vLunge[1] * Cosine(fTurnAngle);
+	vForcedLunge[2] = vLunge[2];
+	
+	SetEntPropVector(iLunge, Prop_Send, "m_queuedLunge", vForcedLunge);	
+}
+
+void vLimitLungeVerticality(int iLunge)
+{
+	static float vLunge[3];
+	GetEntPropVector(iLunge, Prop_Send, "m_queuedLunge", vLunge);
+
+	static float fVertAngle;
+	fVertAngle = DegToRad(g_fPounceVerticalAngle);	
+
+	static float vFlatLunge[3];
+	vFlatLunge[1] = vLunge[1] * Cosine(fVertAngle) - vLunge[2] * Sine(fVertAngle);
+	vFlatLunge[2] = vLunge[1] * Sine(fVertAngle) + vLunge[2] * Cosine(fVertAngle);
+	vFlatLunge[0] = vLunge[0] * Cosine(fVertAngle) + vLunge[2] * Sine(fVertAngle);
+	vFlatLunge[2] = vLunge[0] * -Sine(fVertAngle) + vLunge[2] * Cosine(fVertAngle);
+	
+	SetEntPropVector(iLunge, Prop_Send, "m_queuedLunge", vFlatLunge);
+}
+
+/** 
+ * Thanks to Newteee:
+ * Random number generator fit to a bellcurve. Function to generate Gaussian Random Number fit to a bellcurve with a specified mean and std
+ * Uses Polar Form of the Box-Muller transformation
+*/
+float fGaussianRNG(float fMean, float fStd)
+{
+	static float fX1;
+	static float fX2;
+	static float fW;
+
+	do
+	{
+		fX1 = 2.0 * GetRandomFloat(0.0, 1.0) - 1.0;
+		fX2 = 2.0 * GetRandomFloat(0.0, 1.0) - 1.0;
+		fW = Pow(fX1, 2.0) + Pow(fX2, 2.0);
+	}while(fW >= 1.0);
+	
+	static float e = 2.71828;
+	fW = SquareRoot(-2.0 * (Logarithm(fW, e) / fW));
+
+	static float fY1;
+	static float fY2;
+	fY1 = fX1 * fW;
+	fY2 = fX2 * fW;
+
+	static float fZ1;
+	static float fZ2;
+	fZ1 = fY1 * fStd + fMean;
+	fZ2 = fY2 * fStd - fMean;
+
+	return GetRandomFloat(0.0, 1.0) < 0.5 ? fZ1 : fZ2;
+}
+
+bool bIsAliveSurvivor(int client)
+{
+	return bIsValidClient(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
+}
+
+bool bIsValidClient(int client)
+{
+	return client > 0 && client <= MaxClients && IsClientInGame(client);
 }

@@ -148,7 +148,7 @@
 #define REP_BHOPSTREAK          (1 << 18)       // 262144
 #define REP_CARALARM            (1 << 19)       // 524288
 
-#define REP_DEFAULT             "581685"        // (REP_SKEET | REP_LEVEL | REP_CROWN | REP_DRAWCROWN | REP_HUNTERDP | REP_JOCKEYDP | REP_DEATHCHARGE | REP_CARALARM)
+#define REP_DEFAULT             "2091007"        // (REP_SKEET | REP_LEVEL | REP_CROWN | REP_DRAWCROWN | REP_HUNTERDP | REP_JOCKEYDP | REP_DEATHCHARGE | REP_CARALARM)
                                                 //  1 4 16 32 8192 16384 32768 65536 (122933 with ASSIST, 57397 without); 131072 for instaclears + 524288 for car alarm
 
 
@@ -2953,9 +2953,7 @@ stock HandleBHopStreak( survivor, streak, Float: maxVelocity )
             IS_VALID_INGAME(survivor) && !IsFakeClient(survivor) &&
             streak >= GetConVarInt(g_hCvarBHopMinStreak)
     ) {
-        CPrintToChat(survivor, "{green}★ {olive}You {default}got {blue}%i bunnyhop%s {default}in a row ({blue}top speed: {olive}%.1f{default})",
-                streak,
-                ( streak > 1 ) ? "s" : "",
+        CPrintToChat(survivor, "{green}★ {olive}你 {default}成功一次性完成 {blue}%i 连跳 {default}({blue}最高速度: {olive}%.1f{default})",
                 maxVelocity
             );
     }

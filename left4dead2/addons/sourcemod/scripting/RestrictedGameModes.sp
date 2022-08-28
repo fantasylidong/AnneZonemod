@@ -2,9 +2,9 @@
 /**/
 #pragma semicolon 1
 #include <sourcemod>
+#include <colors>
 
-
-#define PLUGIN_VERSION "1.1"
+#define PLUGIN_VERSION "1.2"
 #define MAX_LINE_WIDTH 64
 ConVar	
 		g_hPluginMode,
@@ -29,6 +29,8 @@ int
 	g_iServerDealWith = 0,
 	g_iLockDifficult = 0,
 	g_iPluginMode = 0;
+Handle
+	ResetGameMode = INVALID_HANDLE;
 public Plugin myinfo =
 {
 	name = "Restricted game modes",
@@ -59,7 +61,6 @@ public void  OnPluginStart()
 	
 	g_hGameMode = FindConVar("mp_gamemode");
 	g_hDifficulty = FindConVar("z_difficulty");
-	g_hGameMode.AddChangeHook(GameMode_Changed);
 	g_hDifficulty.AddChangeHook(GameDifficult_Changed);
 	g_hDefMode.AddChangeHook(ConVarChanged_Cvars);
 	g_hPluginMode.AddChangeHook(ConVarChanged_Cvars);
@@ -78,43 +79,68 @@ void ConVarChanged_Cvars(ConVar convar, const char[] oldValue, const char[] newV
 {
 	GetCvars();
 }
-//游戏模式修改处理
-void GameMode_Changed(ConVar convar, const char[] oldValue, const char[] newValue)
+
+void CheckAllow()
 {
-	char sName[128];
-	convar.GetName(sName, sizeof(sName));
-	
 	GetConVarString(g_hGameMode, g_sCurrentGameMode, sizeof(g_sCurrentGameMode));
 	if(g_iPluginMode == 1)
 	{
-		if( StrContains(g_sAllowGameMode, newValue, false) != -1)
+		if( StrContains(g_sAllowGameMode, g_sCurrentGameMode, false) != -1)
 			IsAllowMode = true;
 		else
 			IsAllowMode = false;
-		LogToFileEx(g_sLogPath, "白名单模式%s: %s -> %s 是允许的模式：%d", sName, oldValue, newValue, IsAllowMode);
+		LogToFileEx(g_sLogPath, "白名单模式:  %s %s是允许的模式", g_sCurrentGameMode, IsAllowMode?"":"不");
 	}
 	else if(g_iPluginMode == 2)
 	{
-		if( StrContains(g_sDisAllowGameMode, newValue, false) != -1)
+		if( StrContains(g_sDisAllowGameMode, g_sCurrentGameMode, false) != -1)
 			IsAllowMode = false;
 		else
 			IsAllowMode = true;
-		LogToFileEx(g_sLogPath, "黑名单模式%s: %s -> %s 是允许的模式：%d", sName, oldValue, newValue, IsAllowMode);
-	}else
-	{
-		return;
+		LogToFileEx(g_sLogPath, "黑名单模式:  %s %s是允许的模式", g_sCurrentGameMode, IsAllowMode?"":"不");
 	}
-	
-	//设置这个计时器是防止你如果有很多服务器，可能都会被匹配，然后全部被重启，而且有个间隔也方便模式能顺利切换为战役模式
-	CreateTimer(10.0, DealWithGameModeChange);
+}
+
+public void OnClientPutInServer(int client)
+{
+	if(!client && IsFakeClient(client))
+		return;
+	if(ResetGameMode == INVALID_HANDLE)
+	{
+		CheckAllow();
+		if(!IsAllowMode)
+		{
+			LogToFileEx(g_sLogPath, "不允许的模式，重置模式");
+			CPrintToChat(client, "此服务器不允许游玩 {blue}%s{default} 模式，将在60秒后自动切换为 {blue}%s{default}", g_sCurrentGameMode, g_sDefMode);
+			ResetGameMode = CreateTimer(60.0, DealWithGameModeChange);
+		}
+	}
+	else
+	{
+		CPrintToChat(client, "此服务器不允许游玩 {blue}%s{default} 模式，将在60秒后自动切换为 {blue}%s{default}", g_sCurrentGameMode, g_sDefMode);
+	}
+}
+
+public void OnMapEnd()
+{
+	if(ResetGameMode != INVALID_HANDLE)
+		CloseHandle(ResetGameMode);
+}
+
+public void OnMapStart()
+{
+	if(ResetGameMode != INVALID_HANDLE)
+		CloseHandle(ResetGameMode);
 }
 
 //锁定游戏难度
 void GameDifficult_Changed(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	if(g_iLockDifficult)
+	{
 		g_hDifficulty.SetString(g_sDefDifficulty);
-	LogToFileEx(g_sLogPath, "难度锁定: %s -> %s", oldValue, newValue);
+		LogToFileEx(g_sLogPath, "难度锁定: %s -> %s", oldValue, newValue);
+	}	
 }
 
 
@@ -132,24 +158,25 @@ void GetCvars()
 
 Action DealWithGameModeChange(Handle timer)
 {
-	if(!IsAllowMode)
+	if(g_iServerDealWith)
 	{
-		if(g_iServerDealWith)
+		switch(g_iServerDealWith)
 		{
-			switch(g_iServerDealWith)
+			case 1:
 			{
-				case 1:
-				{
-					LogToFileEx(g_sLogPath, "不允许的模式%s，切换为%s模式", g_sCurrentGameMode, g_sDefMode);
-					ServerCommand("sm_cvar mp_gamemode %s", g_sDefMode);
-					RestartMap();
-				}
-				case 2:
-				{
-					LogToFileEx(g_sLogPath, "不允许的模式%s，重启服务器", g_sCurrentGameMode);
-					KickAllPlayer();
-					RestartServer();
-				}
+				LogToFileEx(g_sLogPath, "不允许的模式%s，切换为%s模式", g_sCurrentGameMode, g_sDefMode);
+				//PrintToChatAll("不允许的模式%s，切换为%s模式", g_sCurrentGameMode, g_sDefMode);
+				ServerCommand("sm_cvar mp_gamemode %s", g_sDefMode);
+				ServerCommand("mp_gamemode %s", g_sDefMode);
+				RestartMap();
+				return Plugin_Stop;
+			}
+			case 2:
+			{
+				LogToFileEx(g_sLogPath, "不允许的模式%s，重启服务器", g_sCurrentGameMode);
+				KickAllPlayer();
+				RestartServer();
+				return Plugin_Stop;
 			}
 		}
 	}

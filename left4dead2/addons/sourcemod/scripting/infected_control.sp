@@ -28,7 +28,7 @@ public Plugin myinfo =
 	name 			= "Direct InfectedSpawn",
 	author 			= "Caibiii, 夜羽真白，东",
 	description 	= "特感刷新控制，传送落后特感",
-	version 		= "2022.07.1",
+	version 		= "2022.08.14",
 	url 			= "https://github.com/Caibiii/AnneServer"
 }
 
@@ -224,12 +224,12 @@ public void OnGameFrame()
 				g_fSpawnDistanceMax += 5.0;
 				if(g_fSpawnDistanceMax < 500.0)
 				{
-					dist = 850.0;
+					dist = 800.0;
 					fMaxs[2] = fSurvivorPos[2] + 500.0;
 				}
 				else
 				{
-					dist = 350.0 + g_fSpawnDistanceMax;
+					dist = 300.0 + g_fSpawnDistanceMax;
 					fMaxs[2] = fSurvivorPos[2] + g_fSpawnDistanceMax;
 				}
 				fMins[0] = fSurvivorPos[0] - g_fSpawnDistanceMax;
@@ -289,9 +289,11 @@ public void OnGameFrame()
 							continue;					
 						GetClientEyePosition(index, fSurvivorPos);
 						fSurvivorPos[2] -= 60.0;
+						//获取nav地址
 						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0, false, false, false, 3);
 						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0, false, false, false, 2);
-						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin)
+						//nav1 和 nav2 必须有网格相连的路，并且生成距离大于g_fSpawnDistanceMin，增加不能是通nav网格的要求
+						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin && nav1 != nav2)
 						{
 							int iZombieClass = IsBotTypeNeeded();
 							if (iZombieClass > 0&&g_iSpawnMaxCount > 0)
@@ -908,7 +910,7 @@ void HardTeleMode(int client)
 						fSurvivorPos[2] -= 60.0;
 						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0);
 						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0);
-						if (L4D2_NavAreaBuildPath(nav1, nav2, g_fTeleportDistance + 200.0 , TEAM_INFECTED, false))
+						if (L4D2_NavAreaBuildPath(nav1, nav2, g_fTeleportDistance + 200.0 , TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin && nav1 != nav2)
 						{
 							TeleportEntity(client, fSpawnPos, NULL_VECTOR, NULL_VECTOR);
 							SDKUnhook(client, SDKHook_PostThinkPost, SDK_UpdateThink);

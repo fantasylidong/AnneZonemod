@@ -630,7 +630,16 @@ public Action Timer_UpdateReadyUpFooter(Handle timer)
 		}
 		
 		// Format our Witch String
-		if (g_fWitchPercent > 0) // If Witch percent is not 0
+		char readyup_cfgname[256];
+		GetConVarString(FindConVar("l4d_ready_cfg_name"), readyup_cfgname, sizeof(readyup_cfgname));
+		
+		// Format String For Witch
+		// 在这里修改共同点
+		if (StrContains(readyup_cfgname, "WitchParty", false) != -1)
+		{
+			Format(p_sWitchString, sizeof(p_sWitchString), "Witch: Party!");
+		}
+		else if (g_fWitchPercent > 0) // If Witch percent is not 0
 		{
 			Format(p_sWitchString, sizeof(p_sWitchString), "Witch: %d%%", g_fWitchPercent);
 		}
@@ -738,8 +747,16 @@ void ProcessBossString()
 		Format(g_sTankString, sizeof(g_sTankString), "<{olive}Tank{default}> {red}None");
 	}
 	
+	char readyup_cfgname[256];
+	GetConVarString(FindConVar("l4d_ready_cfg_name"), readyup_cfgname, sizeof(readyup_cfgname));
+	
 	// Format String For Witch
-	if (g_fWitchPercent > 0) // If Witch percent is not equal to 0
+	// 在这里修改共同点
+	if (StrContains(readyup_cfgname, "WitchParty", false) != -1)
+	{
+		Format(g_sWitchString, sizeof(g_sWitchString), "<{olive}Witch{default}> {red}Party!");
+	}
+	else if (g_fWitchPercent > 0) // If Witch percent is not equal to 0
 	{
 		Format(g_sWitchString, sizeof(g_sWitchString), "<{olive}Witch{default}> {red}%d%%", g_fWitchPercent);
 	}  

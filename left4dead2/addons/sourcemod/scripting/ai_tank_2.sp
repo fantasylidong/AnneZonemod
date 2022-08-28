@@ -6,7 +6,7 @@
 #include <sdktools>
 #include <colors>
 #include <left4dhooks>
-#include "vector_show.sp"
+//#include "vector_show.sp"
 #include "treeutil.sp"
 
 #define CVAR_FLAG FCVAR_NOTIFY
@@ -14,7 +14,7 @@
 #define WALL_DETECT_DIST 64.0								// 前方墙体检测距离
 #define FALL_DETECT_HEIGHT 120.0							// 向下坠落高度
 #define ROCK_THROW_HEIGHT 110.0								// 坦克石头出手高度
-#define ROCK_AIM_TIME 3.25									// 坦克扔石头瞄准的时间
+#define ROCK_AIM_TIME 0.8									// 坦克扔石头瞄准的时间
 #define FUNCTION_FINDPOS_TRY 5								// 函数找位一次最大找位次数
 #define LAG_DETECT_TIME 2.0									// 坦克位置检测间隔
 #define LAG_DETECT_RAIDUS 100								// 坦克位置检测范围
@@ -119,7 +119,7 @@ public void OnPluginStart()
 	g_hConsumeHealth = CreateConVar("ai_TankConsumeHealth", "2000", "坦克血量少于这个值时强制压制", CVAR_FLAG, true, 0.0);
 	g_hVomitAttackNum = CreateConVar("ai_TankVomitAttackNum", "1", "有这个值的生还者在坦克消耗时被喷，坦克会强制压制", CVAR_FLAG, true, 0.0);
 	g_hConsumeIncap = CreateConVar("ai_TankConsumeIncapNum", "1", "坦克强制压制时，如果令这个数量的生还者倒地，如果可以消耗则继续消耗", CVAR_FLAG, true, 0.0);
-	g_hAirAngleRestrict = CreateConVar("ai_TankAirAngleRestrict", "60", "坦克当前速度与到目标的向量大于这个角度将会停止连跳", CVAR_FLAG, true, 0.0, true, 90.0);
+	g_hAirAngleRestrict = CreateConVar("ai_TankAirAngleRestrict", "50", "坦克当前速度与到目标的向量大于这个角度将会停止连跳", CVAR_FLAG, true, 0.0, true, 90.0);
 	g_hConsumeRockInterval = CreateConVar("ai_TankConsumeRockInterval", "4", "坦克在消耗位上时多少秒扔一次石头", CVAR_FLAG, true, 0.0);
 	// 目标选择
 	g_hTargetChoose = CreateConVar("ai_TankTarget", "0", "坦克目标选择：0=自然目标选择，1=最近，2=血量最低，3=血量最高", CVAR_FLAG, true, 0.0, true, 3.0);
@@ -170,11 +170,17 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			// 扔石头相关
 			if (g_hAllowThrow.BoolValue && throw_min_range >= 0 && throw_max_range >= 0)
 			{
-				if (targetdist > throw_max_range || targetdist < throw_min_range)
+				if (targetdist > throw_max_range || targetdist < throw_min_range && (g_hRockInterval.IntValue != 999 || g_hRockMinInterval.IntValue != 999))
 				{
 					g_hRockInterval.SetInt(999);
 					g_hRockMinInterval.SetInt(999);
 					buttons &= ~ IN_ATTACK2;
+				}
+				else if (g_hRockInterval.IntValue != 5 || g_hRockMinInterval.IntValue != 8)
+				{
+					
+					g_hRockInterval.SetInt(5);
+					g_hRockMinInterval.SetInt(8);
 				}
 			}
 			// 连跳距离及防止跳过头控制，要改连跳距离改这里，默认坦克拳头长度 * 0.8 - 2500 距离允许连跳
@@ -598,7 +604,7 @@ bool Dont_HitWall_Or_Fall(int client, float vel[3])
 {
 	bool hullrayhit = false;
 	int down_hullray_hitent = -1;
-	char down_hullray_hitent_classname[16] = '\0';
+	char down_hullray_hitent_classname[16] = {'\0'};
 	float selfpos[3] = {0.0}, resultpos[3] = {0.0}, mins[3] = {0.0}, maxs[3] = {0.0}, hullray_endpos[3] = {0.0}, down_hullray_startpos[3] = {0.0}, down_hullray_endpos[3] = {0.0}, down_hullray_hitpos[3] = {0.0};
 	GetClientAbsOrigin(client, selfpos);
 	AddVectors(selfpos, vel, resultpos);
@@ -659,7 +665,7 @@ bool TR_EntityFilter(int entity, int mask)
 	}
 	else if (entity > MaxClients)
 	{
-		char classname[16] = '\0';
+		char classname[16] = {'\0'};
 		GetEdictClassname(entity, classname, sizeof(classname));
 		if (strcmp(classname, "infected") == 0 || strcmp(classname, "witch") == 0 || strcmp(classname, "prop_physics") == 0 || strcmp(classname, "tank_rock") == 0)
 		{
@@ -720,7 +726,7 @@ int GetSiCount_ExcludeTank(bool &survivor_failed, int &vomitsurvivor)
 // 获取允许扔石头的范围
 void Get_ThrowRange()
 {
-	char throw_range[16] = '\0', temp[2][6];
+	char throw_range[16] = {'\0'}, temp[2][6];
 	g_hAllowThrowRange.GetString(throw_range, sizeof(throw_range));
 	ExplodeString(throw_range, ",", temp, 2, 6);
 	throw_min_range = StringToInt(temp[0]);
@@ -901,6 +907,7 @@ public Action Timer_TankAction_Reset(Handle timer, int client)
 			PrintToConsoleAll("[Ai-Tank]：函数内重置当前坦克行为");
 		#endif
 	}
+	return Plugin_Continue;
 }
 
 // 判断最近生还者与正在消耗的坦克之间的距离，如果小于 g_hFindNewPosDist 值且可见，找新的消耗位

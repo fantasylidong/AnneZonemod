@@ -343,7 +343,8 @@ public Action:RM_MatchResetTimer(Handle:timer)
 RM_OnClientDisconnect(client)
 {
 	if(IsFakeClient(client) || !RM_bIsMatchModeLoaded) return;
-	CreateTimer(RESETMINTIME, RM_MatchResetTimer);
+	//没人服务器会自动重启，不需要重置模式
+	//CreateTimer(RESETMINTIME, RM_MatchResetTimer);
 }
 
 RM_ResetMatchRequest()
