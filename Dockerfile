@@ -35,5 +35,4 @@ ENV PORT=2333 \
 	steamgroup="25622692,26419628"
 
 ADD entrypoint.sh entrypoint.sh
-RUN chmod +x entrypoint.sh
-ENTRYPOINT ["sh", "./entrypoint.sh"]
+ENTRYPOINT ["sh", "entrypoint.sh"]
