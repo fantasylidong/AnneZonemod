@@ -791,9 +791,9 @@ public OnPluginStart()
 	// Team Gain Events
 	HookEvent("finale_vehicle_leaving", event_CampaignWin);
 	HookEvent("map_transition", event_MapTransition);
-	HookEvent("create_panic_event", event_PanicEvent);
+	//HookEvent("create_panic_event", event_PanicEvent);
 	HookEvent("player_now_it", event_PlayerBlind);
-	HookEvent("player_no_longer_it", event_PlayerBlindEnd);
+	//HookEvent("player_no_longer_it", event_PlayerBlindEnd);
 	HookEvent("award_earned", event_Award_L4D2);
 	HookEvent("witch_spawn", event_WitchSpawn);
 	HookEvent("witch_killed", event_WitchCrowned);

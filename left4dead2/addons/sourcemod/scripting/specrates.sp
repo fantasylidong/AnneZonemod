@@ -137,11 +137,11 @@ AdjustRates(client)
         fLastAdjusted[client] = GetEngineTime();
 
         new L4D2Team:team = L4D2Team:GetClientTeam(client);
-        if (team == L4D2Team_Survivor || team == L4D2Team_Infected || (readyUpIsAvailable && IsClientCaster(client)) )
+        if (team == L4D2Team_Survivor || team == L4D2Team_Infected || (readyUpIsAvailable && IsClientCaster(client)) || l4dstats_GetClientScore(client) >= 300000 || GetUserAdmin(client) != INVALID_ADMIN_ID)
         {
             ResetRates(client);
         }
-        else if (team == L4D2Team_Spectator && l4dstats_GetClientScore(client) <= 300000)
+        else if (team == L4D2Team_Spectator)
         {
             SetSpectatorRates(client);
         }

@@ -21,8 +21,8 @@ public Plugin myinfo =
 }
 
 // ConVars
-ConVar g_hAllowBhop, g_hBhopSpeed, g_hChargeDist, g_hAimOffset, g_hChargerTarget, g_hAllowMeleeAvoid, g_hChargerMeleeDamage, g_hChargeInterval;
-// Float，charge interval 0：冲锋时间戳，1：冲锋结束时间
+ConVar g_hAllowBhop, g_hBhopSpeed, g_hChargeDist, g_hExtraTargetDist, g_hAimOffset, g_hChargerTarget, g_hAllowMeleeAvoid, g_hChargerMeleeDamage, g_hChargeInterval;
+// Float
 float charge_interval[MAXPLAYERS + 1];
 // Bools
 bool can_attack_pinned[MAXPLAYERS + 1] = false, is_charging[MAXPLAYERS + 1] = false;
@@ -34,7 +34,8 @@ public void OnPluginStart()
 	// CreateConVars
 	g_hAllowBhop = CreateConVar("ai_ChargerBhop", "1", "是否开启 Charger 连跳", CVAR_FLAG, true, 0.0, true, 1.0);
 	g_hBhopSpeed = CreateConVar("ai_ChagrerBhopSpeed", "90.0", "Charger 连跳速度", CVAR_FLAG, true, 0.0);
-	g_hChargeDist = CreateConVar("ai_ChargerChargeDistance", "200.0", "Charger 只能在与目标小于这一距离时冲锋", CVAR_FLAG, true, 0.0);
+	g_hChargeDist = CreateConVar("ai_ChargerChargeDistance", "250.0", "Charger 只能在与目标小于这一距离时冲锋", CVAR_FLAG, true, 0.0);
+	g_hExtraTargetDist = CreateConVar("ai_ChargerExtraTargetDistance", "0,350", "Charger 会在这一范围内寻找其他有效的目标（中间用逗号隔开，不要有空格）", CVAR_FLAG);
 	g_hAimOffset = CreateConVar("ai_ChargerAimOffset", "30.0", "目标的瞄准水平与 Charger 处在这一范围内，Charger 不会冲锋", CVAR_FLAG, true, 0.0);
 	g_hAllowMeleeAvoid = CreateConVar("ai_ChargerMeleeAvoid", "1", "是否开启 Charger 近战回避", CVAR_FLAG, true, 0.0, true, 1.0);
 	g_hChargerMeleeDamage = CreateConVar("ai_ChargerMeleeDamage", "350", "Charger 血量小于这个值，将不会直接冲锋拿着近战的生还者", CVAR_FLAG, true, 0.0);
@@ -55,14 +56,11 @@ public void evt_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 		is_charging[client] = false;
 	}
 }
-
 // 主要
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon)
 {
 	if (IsCharger(client) && IsPlayerAlive(client))
 	{
-		if(GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
-			return Plugin_Continue;
 		bool has_sight = view_as<bool>(GetEntProp(client, Prop_Send, "m_hasVisibleThreats"));
 		int target = GetClientAimTarget(client, true), flags = GetEntityFlags(client), closet_survivor_distance = GetClosetSurvivorDistance(client), ability = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 		float self_pos[3] = {0.0}, target_pos[3] = {0.0}, vec_speed[3] = {0.0}, vel_buffer[3] = {0.0}, cur_speed = 0.0;
@@ -70,7 +68,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vec_speed);
 		cur_speed = SquareRoot(Pow(vec_speed[0], 2.0) + Pow(vec_speed[1], 2.0));
 		survivor_num = GetSurvivorCount(true, false);
-		// 记录冲锋结束时间戳
+		// charge_interval 记录每次冲锋结束的时间戳
 		if (IsValidEntity(ability) && !is_charging[client] && GetEntProp(ability, Prop_Send, "m_isCharging") == 1)
 		{
 			is_charging[client] = true;
@@ -113,7 +111,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					}
 				}
 				// 目标正在看着自身，自身可以冲锋，目标没有拿着近战，且不在倒地或起身状态时则直接冲锋，目标拿着近战，则转到 OnChooseVictim 处理，转移新目标或继续挥拳
-				else if (Is_Target_Watching_Attacker(client, target, g_hAimOffset.IntValue) && !Client_MeleeCheck(target) && !Is_InGetUp_Or_Incapped(target) && (flags & FL_ONGROUND))
+				else if (Is_Target_Watching_Attacker(client, target, g_hAimOffset.IntValue) && !Client_MeleeCheck(target) && !Is_InGetUp_Or_Incapped(target) && GetEntProp(ability, Prop_Send, "m_isCharging") != 1 && (flags & FL_ONGROUND))
 				{
 					SetCharge(client);
 					buttons |= IN_ATTACK2;
@@ -168,7 +166,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 		// 连跳，并阻止冲锋，可以攻击被控的人的时，将最小距离置 0，连跳追上被控的人
 		//int min_dist = can_attack_pinned[client] ? 0 : g_hChargeDist.IntValue;
-		if (has_sight && g_hAllowBhop.BoolValue && 75 < closet_survivor_distance < 10000 && cur_speed > 175.0 && IsValidSurvivor(target))
+		if (has_sight && g_hAllowBhop.BoolValue && cur_speed > 175.0 && IsValidSurvivor(target))
 		{
 			if (flags & FL_ONGROUND)
 			{
@@ -197,12 +195,23 @@ public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
 	int new_target = 0;
 	if (IsCharger(specialInfected))
 	{
-		if(GetEntPropEnt(specialInfected, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(specialInfected, Prop_Send, "m_carryVictim") > 0)
-			return Plugin_Continue;
-		float self_pos[3] = {0.0}, target_pos[3] = {0.0};
+		float self_pos[3] = {0.0}, target_pos[3] = {0.0}, min_dist = 0.0, max_dist = 0.0;
 		GetClientEyePosition(specialInfected, self_pos);
-		// 获取在冲锋范围内的目标
-		FindRangedClients(specialInfected, g_hChargeDist.FloatValue + 150.0);
+		// 获取在冲锋范围内的目标，从 Cvar 中获取最下与最大范围
+		char cvar_dist[16] = '\0';
+		g_hExtraTargetDist.GetString(cvar_dist, sizeof(cvar_dist));
+		if (strcmp(cvar_dist, NULL_STRING) != 0)
+		{
+			char result_dist[2][16];
+			ExplodeString(cvar_dist, ",", result_dist, 2, 16);
+			min_dist = StringToFloat(result_dist[0]);
+			max_dist = StringToFloat(result_dist[1]);
+		}
+		else
+		{
+			max_dist = 350.0;
+		}
+		FindRangedClients(specialInfected, min_dist, max_dist);
 		if (IsValidSurvivor(curTarget) && IsPlayerAlive(curTarget))
 		{
 			GetClientEyePosition(curTarget, target_pos);
@@ -419,17 +428,18 @@ bool IsInChargeDuration(int client)
 	return view_as<bool>((GetGameTime() - (g_hChargeInterval.FloatValue + charge_interval[client])) < 0.0);
 }
 // 查找范围内可视的有效的（未倒地，未死亡，未被控）的玩家
-int FindRangedClients(int client, float range)
+int FindRangedClients(int client, float min_range, float max_range)
 {
 	int index = 0;
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientConnected(i) && IsClientInGame(i) && GetClientTeam(i) == view_as<int>(TEAM_SURVIVOR) && IsPlayerAlive(i) && !IsClientIncapped(i))
 		{
-			float self_eye_pos[3] = {0.0}, target_eye_pos[3] = {0.0};
+			float self_eye_pos[3] = {0.0}, target_eye_pos[3] = {0.0}, dist = 0.0;
 			GetClientEyePosition(client, self_eye_pos);
 			GetClientEyePosition(i, target_eye_pos);
-			if (GetVectorDistance(self_eye_pos, target_eye_pos) <= range)
+			dist = GetVectorDistance(self_eye_pos, target_eye_pos);
+			if (dist >= min_range && dist <= max_range)
 			{
 				Handle hTrace = TR_TraceRayFilterEx(self_eye_pos, target_eye_pos, MASK_VISIBLE, RayType_EndPoint, TR_RayFilter, client);
 				if (!TR_DidHit(hTrace) || TR_GetEntityIndex(hTrace) == i)
@@ -479,7 +489,80 @@ float[] CalculateVel(float self_pos[3], float target_pos[3], float force)
 	ScaleVector(vecbuffer, force);
 	return vecbuffer;
 }
-
+// 检测下一帧的位置是否会撞墙或向下受到伤害或会掉落
+stock bool Dont_HitWall_Or_Fall(int client, float vel[3])
+{
+	bool hullrayhit = false;
+	int down_hullray_hitent = -1;
+	char down_hullray_hitent_classname[16] = '\0';
+	float selfpos[3] = {0.0}, resultpos[3] = {0.0}, mins[3] = {0.0}, maxs[3] = {0.0}, hullray_endpos[3] = {0.0}, down_hullray_startpos[3] = {0.0}, down_hullray_endpos[3] = {0.0}, down_hullray_hitpos[3] = {0.0};
+	GetClientAbsOrigin(client, selfpos);
+	AddVectors(selfpos, vel, resultpos);
+	GetClientMins(client, mins);
+	GetClientMaxs(client, maxs);
+	selfpos[2] += NAV_MESH_HEIGHT;
+	resultpos[2] += NAV_MESH_HEIGHT;
+	// 由自身位置 +NAV_MESH_HEIGHT 高度 向前射出大小为 mins，maxs 的固体，检测前方 NAV_MESH_HEIGHT 距离是否能撞到，撞到则不允许连跳
+	Handle hTrace = TR_TraceHullFilterEx(selfpos, resultpos, mins, maxs, MASK_NPCSOLID_BRUSHONLY, TR_EntityFilter);
+	if (TR_DidHit(hTrace))
+	{
+		hullrayhit = true;
+		TR_GetEndPosition(hullray_endpos, hTrace);
+		if (GetVectorDistance(selfpos, hullray_endpos) <= NAV_MESH_HEIGHT)
+		{
+			delete hTrace;
+			return false;
+		}
+	}
+	delete hTrace;
+	resultpos[2] -= NAV_MESH_HEIGHT;
+	// 没有撞到，则说明前方 g_hAttackRange 距离内没有障碍物，接着进行下一帧理论位置向下的检测，检测是否有会对自身造成伤害的位置
+	if (!hullrayhit)
+	{
+		down_hullray_startpos = resultpos;
+	}
+	CopyVectors(down_hullray_startpos, down_hullray_endpos);
+	down_hullray_endpos[2] -= 100000.0;
+	Handle hDownTrace = TR_TraceHullFilterEx(down_hullray_startpos, down_hullray_endpos, mins, maxs, MASK_NPCSOLID_BRUSHONLY, TR_EntityFilter);
+	if (TR_DidHit(hDownTrace))
+	{
+		TR_GetEndPosition(down_hullray_hitpos, hDownTrace);
+		// 如果向下的射线撞到的位置减去起始位置的高度大于 FALL_DETECT_HEIGHT 则说明会掉下去，返回 false
+		if (FloatAbs(down_hullray_startpos[2] - down_hullray_hitpos[2]) > FALL_DETECT_HEIGHT)
+		{
+			delete hDownTrace;
+			return false;
+		}
+		down_hullray_hitent = TR_GetEntityIndex(hDownTrace);
+		GetEdictClassname(down_hullray_hitent, down_hullray_hitent_classname, sizeof(down_hullray_hitent_classname));
+		if (strcmp(down_hullray_hitent_classname, "trigger_hurt") == 0)
+		{
+			delete hDownTrace;
+			return false;
+		}
+		delete hDownTrace;
+		return true;
+	}
+	delete hDownTrace;
+	return false;
+}
+bool TR_EntityFilter(int entity, int mask)
+{
+	if (entity <= MaxClients)
+	{
+		return false;
+	}
+	else if (entity > MaxClients)
+	{
+		char classname[16] = '\0';
+		GetEdictClassname(entity, classname, sizeof(classname));
+		if (strcmp(classname, "infected") == 0 || strcmp(classname, "witch") == 0 || strcmp(classname, "prop_physics") == 0 || strcmp(classname, "tank_rock") == 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
 // 目标与牛的 x 距离是否在限制内
 bool Is_Target_Watching_Attacker(int client, int target, int offset)
 {

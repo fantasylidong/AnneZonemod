@@ -3,7 +3,7 @@
 // 头文件
 #include <sourcemod>
 #include <updater>
-#define UPDATE_URL    "http://home.trygek.com:8880/Anne/Anne_Updater.txt"
+#define UPDATE_URL    "https://raw.githubusercontent.com/Caibiii/AnneServer/test/left4dead2/addons/sourcemod/Anne_Updater.txt"
 
 // 插件基本信息，根据 GPL 许可证条款，需要修改插件请勿修改此信息！
 public Plugin myinfo = 
