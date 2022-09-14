@@ -1,15 +1,13 @@
 #pragma semicolon 1
 #pragma newdecls required
-#include <colors>
+#define DEBUG 0
+// 头文件
 #include <sourcemod>
 #include <sdktools>
 #include <left4dhooks>
+#undef REQUIRE_PLUGIN
+#include <ai_smoker_new>
 //#include <l4d2_saferoom_detect>
-
-#define VERSION "22.07.01"
-#define DEBUG 0
-// 头文件
-
 
 #define CVAR_FLAG FCVAR_NOTIFY
 #define TEAM_SURVIVOR 2
@@ -25,14 +23,14 @@
 char sLogFile[PLATFORM_MAX_PATH] = "addons/sourcemod/logs/infected_control.txt";
 #endif
 // 插件基本信息，根据 GPL 许可证条款，需要修改插件请勿修改此信息！
-public Plugin myinfo =
+public Plugin myinfo = 
 {
-    name = "All Charger",
-    author = "东",
-    description = "所有特感全部生成为牛",
-    version = VERSION,
-    url = "http://github.com/fantasylidong/",
-};
+	name 			= "Direct InfectedSpawn",
+	author 			= "Caibiii, 夜羽真白，东",
+	description 	= "特感刷新控制，传送落后特感",
+	version 		= "2022.08.14",
+	url 			= "https://github.com/Caibiii/AnneServer"
+}
 
 // Cvars
 ConVar g_hSpawnDistanceMin, g_hSpawnDistanceMax, g_hTeleportSi, g_hTeleportDistance, g_hSiLimit, g_hSiInterval, g_hMaxPlayerZombies;
@@ -44,7 +42,7 @@ int iHunterLimit,iJockeyLimit,iChargerLimit,iSmokerLimit,iSpitterLimit,iBoomerLi
 // Floats
 float g_fSpawnDistanceMin, g_fSpawnDistanceMax, g_fTeleportDistance, g_fSiInterval;
 // Bools
-bool g_bTeleportSi, g_bIsLate = false, g_bCanRun = false;
+bool g_bTeleportSi, g_bIsLate = false;
 // Handle
 Handle g_hTeleHandle = INVALID_HANDLE;
 // ArrayList
@@ -70,11 +68,9 @@ public void OnPluginStart()
 	g_hTeleportDistance = CreateConVar("inf_TeleportDistance", "800.0", "特感落后于最近的生还者超过这个距离则将它们传送", CVAR_FLAG, true, 0.0);
 	g_hSiLimit = CreateConVar("l4d_infected_limit", "6", "一次刷出多少特感", CVAR_FLAG, true, 0.0);
 	g_hSiInterval = CreateConVar("versus_special_respawn_interval", "16.0", "对抗模式下刷特时间控制", CVAR_FLAG, true, 0.0);
-//	g_hSpawnMax = CreateConVar("spawn_count_max", "0", "此值记录特感找位次数，根据此值动态改变刷新距离", ~ CVAR_FLAG, true, 0.0);
 	g_hMaxPlayerZombies = FindConVar("z_max_player_zombies");
 	SetConVarInt(FindConVar("director_no_specials"), 1);
 	// HookEvents
-	HookEvent("player_spawn", evt_PlayerSpawn);
 	HookEvent("player_death", evt_PlayerDeath, EventHookMode_PostNoCopy);
 	HookEvent("round_start", evt_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("finale_win", evt_RoundEnd, EventHookMode_PostNoCopy);
@@ -95,39 +91,17 @@ public void OnPluginStart()
 	SetConVarBounds(g_hMaxPlayerZombies, ConVarBound_Upper, true, g_hSiLimit.FloatValue);
 	// Debug
 	RegAdminCmd("sm_startspawn", Cmd_StartSpawn, ADMFLAG_ROOT, "管理员重置刷特时钟");
+
 }
 
-// ***** 事件 *****
-public void evt_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
-{
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (IsAiTank(client)&&IsClientInGame(client) && IsFakeClient(client))
-	{
-		KickClient(client,"1vht模式不允许出现tank");
-	}
-}
-
-// ***** 方法 *****
-bool IsAiTank(int client)
-{
-	if (client && client <= MaxClients && IsClientInGame(client) && IsPlayerAlive(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_INFECTED && GetEntProp(client, Prop_Send, "m_zombieClass") == 8 && GetEntProp(client, Prop_Send, "m_isGhost") != 1)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
 // 向量绘制
 // #include "vector/vector_show.sp"
 
-public Action Cmd_StartSpawn(int client, int args)
+stock Action Cmd_StartSpawn(int client, int args)
 {
 	if (L4D_HasAnySurvivorLeftSafeArea())
 	{
 		CreateTimer(0.1, SpawnFirstInfected);
-		CPrintToChatAll("目前模式是全牛模式，牛的移动速度为350，冲刺速度为750，撞人缓冲时间2s");
 		ResetInfectedNumber();
 	}
 	return Plugin_Continue;
@@ -175,7 +149,6 @@ public void evt_RoundStart(Event event, const char[] name, bool dontBroadcast)
 		g_hTeleHandle = INVALID_HANDLE;
 	}
 	g_bIsLate = false;
-	g_bCanRun = false;
 	g_iSpawnMaxCount = 0;
 	for (int hTimerHandle = aThreadHandle.Length - 1; hTimerHandle >= 0; hTimerHandle--)
 	{
@@ -196,7 +169,6 @@ public void evt_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 		g_hTeleHandle = INVALID_HANDLE;
 	}
 	g_bIsLate = false;
-	g_bCanRun = false;
 	g_iSpawnMaxCount = 0;
 	// 从 ArrayList 末端往前判断删除时钟，如果从前往后，因为 ArrayList 会通过前移后面的索引来填补前面擦除的空位，导致有时钟句柄无法擦除
 	for (int hTimerHandle = aThreadHandle.Length - 1; hTimerHandle >= 0; hTimerHandle--)
@@ -240,10 +212,10 @@ public void OnGameFrame()
 	{
 		CreateTimer(0.1, MaxSpecialsSet);
 	}
-	if (g_bIsLate && g_iSpawnMaxCount > 0 && g_iSiLimit > iHunterLimit+iSmokerLimit+iBoomerLimit+iSpitterLimit+iJockeyLimit+iChargerLimit)
+	if (g_bIsLate && g_iSpawnMaxCount > 0)
 	{
-			if(g_bCanRun)
-				HasAnyCountFull();			
+		if (g_iSiLimit > HasAnyCountFull())
+		{		
 			float fSpawnPos[3] = {0.0}, fSurvivorPos[3] = {0.0}, fDirection[3] = {0.0}, fEndPos[3] = {0.0}, fMins[3] = {0.0}, fMaxs[3] = {0.0},dist;	
 			if (IsValidSurvivor(g_iTargetSurvivor))
 			{
@@ -252,12 +224,12 @@ public void OnGameFrame()
 				g_fSpawnDistanceMax += 5.0;
 				if(g_fSpawnDistanceMax < 500.0)
 				{
-					dist = 850.0;
+					dist = 800.0;
 					fMaxs[2] = fSurvivorPos[2] + 500.0;
 				}
 				else
 				{
-					dist = 350.0 + g_fSpawnDistanceMax;
+					dist = 300.0 + g_fSpawnDistanceMax;
 					fMaxs[2] = fSurvivorPos[2] + g_fSpawnDistanceMax;
 				}
 				fMins[0] = fSurvivorPos[0] - g_fSpawnDistanceMax;
@@ -319,7 +291,7 @@ public void OnGameFrame()
 						fSurvivorPos[2] -= 60.0;
 						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0, false, false, false, 3);
 						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0, false, false, false, 2);
-						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin)
+						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin && nav1 != nav2)
 						{
 							int iZombieClass = IsBotTypeNeeded();
 							if (iZombieClass > 0&&g_iSpawnMaxCount > 0)
@@ -328,65 +300,23 @@ public void OnGameFrame()
 								if (IsValidEntity(entityindex) && IsValidEdict(entityindex))
 								{
 									g_iSpawnMaxCount -= 1;
-									addlimit(iZombieClass);
+									//addlimit(iZombieClass);
 									print_type(iZombieClass,g_fSpawnDistanceMax);
-									return;
 								}
-								/*
-								if (SAFEDETECT_IsEntityInEndSaferoom(entityindex))
-								{									
-									//PrintToConsoleAll("[Infected-Spawn]：阳间模式：特感：%N，位置：%.2f，%.2f，%.2f，刷新在终点安全屋内，强制处死", entityindex, fSpawnPos[0], fSpawnPos[1], fSpawnPos[2]);
-									g_iSpawnMaxCount += 1;
-									dellimit(iZombieClass);
-									ForcePlayerSuicide(entityindex);
-									return;
-								}
-								*/
 							}
 						}
 					}
-				}
+				}			
 			}			
-		//}
-	}
-}
-/*
-public void dellimit(int iZombieClass){
-	switch (iZombieClass)
-	{
-		case 1:
-		{
-			iSmokerLimit--;
-		}
-		case 2:
-		{
-			iBoomerLimit--;
-		}
-		case 3:
-		{
-			iHunterLimit--;
-		}
-		case 4:
-		{
-			iSpitterLimit--;
-		}
-		case 5:
-		{
-			iJockeyLimit--;
-		}
-		case 6:
-		{
-			iChargerLimit--;
 		}
 	}
 }
-*/
 
-public void ResetInfectedNumber(){
+stock void ResetInfectedNumber(){
 	int iBoomers = 0, iSmokers = 0, iHunters = 0, iSpitters = 0, iJockeys = 0, iChargers = 0;
 	for (int infected = 0; infected < MaxClients; infected++)
 	{
-		if (IsInfectedBot(infected) && IsPlayerAlive(infected)||IsGhost(infected))
+		if (IsInfectedBot(infected) && (IsPlayerAlive(infected)||IsGhost(infected)))
 		{
 			int iZombieClass = GetEntProp(infected, Prop_Send, "m_zombieClass");
 			switch (iZombieClass)
@@ -426,7 +356,7 @@ public void ResetInfectedNumber(){
 	iChargerLimit=iChargers;
 }
 
-public void print_type(int iType,float g_fSpawnDistanceMax1){
+stock void print_type(int iType,float g_fSpawnDistanceMax1){
 	char sTime[32];
 	FormatTime(sTime, sizeof(sTime), "%I-%M-%S", GetTime()); 
 	int iBoomers = 0, iSmokers = 0, iHunters = 0, iSpitters = 0, iJockeys = 0, iChargers = 0;
@@ -490,7 +420,7 @@ public void print_type(int iType,float g_fSpawnDistanceMax1){
 	}
 
 }
-public void addlimit(int iZombieClass){
+stock void addlimit(int iZombieClass){
 	switch (iZombieClass)
 	{
 		case 1:
@@ -520,15 +450,12 @@ public void addlimit(int iZombieClass){
 	}
 }
 
-
-
 // 初始 & 动态刷特时钟
 public Action SpawnFirstInfected(Handle timer)
 {
 	if (!g_bIsLate)
 	{
 		g_bIsLate = true;
-		g_bCanRun = true;
 		if (g_hSiInterval.FloatValue > 9.0)
 		{
 			Handle aSpawnTimer = CreateTimer(g_fSiInterval + 8.0, SpawnNewInfected, _, TIMER_REPEAT);
@@ -593,7 +520,7 @@ public Action SpawnNewInfected(Handle timer)
 			}
 		}
 		g_fSpawnDistanceMax = g_fSpawnDistanceMin;
-		ResetInfectedNumber();
+		//ResetInfectedNumber();
 
 		g_iSpawnMaxCount += 1;
 		if (g_iSiLimit == g_iSpawnMaxCount){
@@ -671,75 +598,60 @@ bool IsOnValidMesh(float fReferencePos[3])
 	}
 }
 
-//判断该坐标是否可以看到生还或者距离小于200码
-bool PlayerVisibleTo(float spawnpos[3])
+//判断该坐标是否可以看到生还或者距离小于200码，减少一层栈函数，增加实时性
+bool PlayerVisibleTo(float targetposition[3])
 {
-	float pos[3];
-	for(int i = 0; i < g_iSurvivorNum; i++)
+	float position[3], vAngles[3], vLookAt[3], spawnPos[3];
+	for (int client = 1; client <= MaxClients; ++client)
 	{
-		if(IsValidSurvivor(g_iSurvivors[i]) && IsPlayerAlive(g_iSurvivors[i]) )
+		if (IsClientConnected(client) && IsClientInGame(client) && IsValidSurvivor(client) && IsPlayerAlive(client))
 		{
-			GetClientEyePosition(g_iSurvivors[i], pos);
-			if(PosIsVisibleTo(g_iSurvivors[i], spawnpos) || GetVectorDistance(spawnpos, pos) < g_fSpawnDistanceMin)
+			GetClientEyePosition(client, position);
+			if(GetVectorDistance(targetposition, position) < g_fSpawnDistanceMin)
 			{
 				return true;
 			}
-		}	
-	}
-	return false;
-}
-
-//判断倒地的人800单位附近是不是已经没有健康的生还者了
-public bool IsClientIncappedAndNoNearby(int client, float spawnpos[3])
-{
-	float pos[3];
-	for(int i = 0; i < g_iSurvivorNum; i++)
-	{
-		if(IsValidSurvivor(g_iSurvivors[i]) && IsPlayerAlive(g_iSurvivors[i])&& !IsClientIncapped(g_iSurvivors[i]))
-		{
-			if(g_iSurvivors[i] == client)
-			continue;
-			GetClientEyePosition(g_iSurvivors[i], pos);
-			if(GetVectorDistance(spawnpos, pos) < 800.0)
-				return false;
-		}				
-	}
-	return true;
-}
-
-//判断该坐标是否可以看到生还或者距离小于300码(传送专属)
-bool TeleportPlayerVisibleTo(float spawnpos[3])
-{
-	float pos[3];
-	for(int i = 0; i < g_iSurvivorNum; i++)
-	{
-		if(IsValidSurvivor(g_iSurvivors[i]) && IsPlayerAlive(g_iSurvivors[i]))
-		{
-			GetClientEyePosition(g_iSurvivors[i], pos);
-			if(IsClientIncapped(g_iSurvivors[i]) && IsClientIncappedAndNoNearby(g_iSurvivors[i],spawnpos))
-				continue;
-			if(PosIsVisibleTo(g_iSurvivors[i], spawnpos) || GetVectorDistance(spawnpos, pos) < g_fSpawnDistanceMin)
+			MakeVectorFromPoints(targetposition, position, vLookAt);
+			GetVectorAngles(vLookAt, vAngles);
+			Handle trace = TR_TraceRayFilterEx(targetposition, vAngles, MASK_VISIBLE, RayType_Infinite, TraceFilter, client);
+			if(TR_DidHit(trace))
+			{
+				static float vStart[3];
+				TR_GetEndPosition(vStart, trace);
+				if((GetVectorDistance(targetposition, vStart, false) + 75.0) >= GetVectorDistance(position, targetposition))
+				{
+					return true;
+				}
+				else
+				{
+					spawnPos = targetposition;
+					spawnPos[2] += 40.0;
+					MakeVectorFromPoints(spawnPos, position, vLookAt);
+					GetVectorAngles(vLookAt, vAngles);
+					Handle trace2 = TR_TraceRayFilterEx(spawnPos, vAngles, MASK_VISIBLE, RayType_Infinite, TraceFilter, client);
+					if(TR_DidHit(trace2))
+					{
+						TR_GetEndPosition(vStart, trace2);
+						if((GetVectorDistance(spawnPos, vStart, false) + 75.0) >= GetVectorDistance(position, spawnPos))
+							return  true;
+					}
+					else
+					{
+						return true;
+					}
+					delete trace2;
+				}
+			}
+			else
 			{
 				return true;
 			}
-		}	
-	}
-	return false;
-}
-
-/*
-//获取没倒底的最远生还者流程
-float GetFurthestUncappedSurvivorFlow(){
-	float HighestFlow = 0.0;
-	for(int i = 1;i< = MaxClients; i++)
-		if(IsValidSurvivor(i))
-			if(!L4D_IsPlayerIncapacitated(i) || !L4D_IsPlayerPinned(i)){
-				float tmp = L4D2Direct_GetFlowDistance(i);
-				if(tmp > HighestFlow)
-					HighestFlow = tmp;
+			delete trace;
 		}
-	return HighestFlow;
-}*/
+	}
+	return false;
+}
+
 
 // 判断玩家是否倒地，倒地返回 true，未倒地返回 false
 stock bool IsClientIncapped(int client)
@@ -753,55 +665,6 @@ stock bool IsClientIncapped(int client)
 		return false;
 	}
 }
-
-//判断从该坐标发射的射线是否击中目标
-bool PosIsVisibleTo(int client, const float targetposition[3])
-{
-	float position[3], vAngles[3], vLookAt[3], spawnPos[3];
-	GetClientEyePosition(client, position);
-	MakeVectorFromPoints(targetposition, position, vLookAt);
-	GetVectorAngles(vLookAt, vAngles);
-	Handle trace = TR_TraceRayFilterEx(targetposition, vAngles, MASK_VISIBLE, RayType_Infinite, TraceFilter, client);
-	bool isVisible;
-	isVisible = false;
-	if(TR_DidHit(trace))
-	{
-		static float vStart[3];
-		TR_GetEndPosition(vStart, trace);
-		if((GetVectorDistance(targetposition, vStart, false) + 75.0) >= GetVectorDistance(position, targetposition))
-		{
-			isVisible = true;
-		}
-		else
-		{
-			spawnPos = targetposition;
-			spawnPos[2] += 40.0;
-			MakeVectorFromPoints(spawnPos, position, vLookAt);
-			GetVectorAngles(vLookAt, vAngles);
-			Handle trace2 = TR_TraceRayFilterEx(spawnPos, vAngles, MASK_VISIBLE, RayType_Infinite, TraceFilter, client);
-			if(TR_DidHit(trace2))
-			{
-				TR_GetEndPosition(vStart, trace2);
-				if((GetVectorDistance(spawnPos, vStart, false) + 75.0) >= GetVectorDistance(position, spawnPos))
-				isVisible = true;
-			}
-			else
-			{
-				isVisible = true;
-			}
-			delete trace2;
-//			CloseHandle(trace2);
-		}
-	}
-	else
-	{
-		isVisible = true;
-	}
-	delete trace;
-//	CloseHandle(trace);
-	return isVisible;
-}
-
 
 bool IsPlayerStuck(float fSpawnPos[3])
 {
@@ -884,12 +747,12 @@ public Action Timer_PositionSi(Handle timer)
 		if(CanBeTeleport(client)){
 			float fSelfPos[3] = {0.0};
 			GetClientEyePosition(client, fSelfPos);
-			if (!TeleportPlayerVisibleTo(fSelfPos))
+			if (!PlayerVisibleTo(fSelfPos))
 			{
 				if (g_iTeleCount[client] > 5)
 				{
 					Debug_Print("%N开始传送",client);
-					if (!TeleportPlayerVisibleTo(fSelfPos) && !IsPinningSomeone(client))
+					if (!PlayerVisibleTo(fSelfPos))
 					{
 						SDKHook(client, SDKHook_PostThinkPost, SDK_UpdateThink);
 						g_iTeleCount[client] = 0;
@@ -906,75 +769,15 @@ public Action Timer_PositionSi(Handle timer)
 	return Plugin_Continue;
 }
 
-bool IsSpitter(int client)
-{
-	if (IsInfectedBot(client) && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == ZC_SPITTER)
-	{
-		g_iTeleCount[client] = 50;//给予spitter立即传送的权限
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
 
-//优化服务器性能，寻找目标一秒钟一次就行了
-public Action ResetCanRun(Handle timer)
-{
-	g_bCanRun = true;
-}
 
-void HasAnyCountFull()
-{
-	g_bCanRun = false;
-	CreateTimer( 1.0 , ResetCanRun);
-	int  iSurvivors[8] = {0}, iSurvivorIndex = 0, FurthestAlivePlayer=0;
-	for (int client = 1; client <= MaxClients; client++)
-	{
-		if (IsValidSurvivor(client) && IsPlayerAlive(client) && !IsPinned(client) && !L4D_IsPlayerIncapacitated(client))
-		{
-			
-			if(FurthestAlivePlayer == 0)
-				FurthestAlivePlayer=client;
-			else if(L4D2Direct_GetFlowDistance(client) > L4D2Direct_GetFlowDistance(FurthestAlivePlayer))
-				FurthestAlivePlayer = client;
-			iSurvivors[iSurvivorIndex] = client;
-			iSurvivorIndex += 1;
-		}
-	}
-	if (iSurvivorIndex > 0)
-	{
-		for (int index = 0; index < iSurvivorIndex; index++)
-		{
-			if (IsValidSurvivor(iSurvivors[index]) && IsValidSurvivor(FurthestAlivePlayer) && IsPlayerAlive(iSurvivors[index]) && !IsPinned(iSurvivors[index]) && !L4D_IsPlayerIncapacitated(iSurvivors[index] ))
-			{
-				if(iSurvivors[index] == FurthestAlivePlayer)
-						continue;
-					
-				float abs[3],abs2[3];
-				GetClientAbsOrigin(iSurvivors[index], abs);
-				GetClientAbsOrigin(FurthestAlivePlayer, abs2);
-				if(GetVectorDistance(abs,abs2)> 800.0)
-				{
-					g_iTargetSurvivor =FurthestAlivePlayer;
-					return ;
-				}
-			}
-				
-		}
-		g_iTargetSurvivor = iSurvivors[GetRandomInt(0, iSurvivorIndex - 1)];
-	}
-	return;
-}
 
-/*
 int HasAnyCountFull()
 {
-	int iInfectedCount = 0, iSurvivors[4] = {0}, iSurvivorIndex = 0;
+	int iInfectedCount = 0, iSurvivors[8] = {0}, iSurvivorIndex = 0;
 	for (int client = 1; client <= MaxClients; client++)
 	{
-		if (IsInfectedBot(client) && IsPlayerAlive(client)&&IsGhost(client))
+		if (IsInfectedBot(client) && IsPlayerAlive(client))
 		{
 			int iZombieClass = GetEntProp(client, Prop_Send, "m_zombieClass");
 			if (iZombieClass <= 6)
@@ -982,10 +785,10 @@ int HasAnyCountFull()
 				iInfectedCount += 1;
 			}
 		}
-		if (IsValidSurvivor(client) && IsPlayerAlive(client) && !IsPinned(client))
+		if (IsValidSurvivor(client) && IsPlayerAlive(client) && (!IsPinned(client) || !IsClientIncapped(client)))
 		{
 			g_bIsLate = true;
-			if (iSurvivorIndex < 4)
+			if (iSurvivorIndex < 8)
 			{
 				iSurvivors[iSurvivorIndex] = client;
 				iSurvivorIndex += 1;
@@ -1002,13 +805,20 @@ int HasAnyCountFull()
 	}
 	return iInfectedCount;
 }
-*/
+
 
 // 传送落后特感
 public void SDK_UpdateThink(int client)
 {
 	if (IsInfectedBot(client) && IsPlayerAlive(client))
 	{
+		if(IsAiSmoker(client) && !IsSmokerCanUseAbility(client))
+		{
+			//减去3s拉失败时间
+			g_iTeleCount[client] = 2;
+			SDKUnhook(client, SDKHook_PostThinkPost, SDK_UpdateThink);
+			return;
+		}
 		g_iTeleCount[client] = 0;
 		HardTeleMode(client);
 			
@@ -1022,7 +832,7 @@ void HardTeleMode(int client)
 {
 	static float fEyePos[3] = {0.0}, fSelfEyePos[3] = {0.0};
 	GetClientEyePosition(client, fEyePos);
-	if (!TeleportPlayerVisibleTo(fEyePos) && !IsPinningSomeone(client))
+	if (!PlayerVisibleTo(fEyePos) && !IsPinningSomeone(client))
 	{
 		float fSpawnPos[3] = {0.0}, fSurvivorPos[3] = {0.0}, fDirection[3] = {0.0}, fEndPos[3] = {0.0}, fMins[3] = {0.0}, fMaxs[3] = {0.0};
 		if (IsValidSurvivor(g_iTargetSurvivor))
@@ -1044,7 +854,7 @@ void HardTeleMode(int client)
 //			fVisiblePos[2] =fSpawnPos[2];
 			int count2=0;
 			
-			while (TeleportPlayerVisibleTo(fSpawnPos) || !IsOnValidMesh(fSpawnPos) || IsPlayerStuck(fSpawnPos))
+			while (PlayerVisibleTo(fSpawnPos) || !IsOnValidMesh(fSpawnPos) || IsPlayerStuck(fSpawnPos))
 			{
 				count2 ++;
 				if(count2 > 20)
@@ -1076,7 +886,7 @@ void HardTeleMode(int client)
 					}
 				}
 			}
-			if (count2 <= 20)
+			if (count2<= 20)
 			{
 				for (int count = 0; count < g_iSurvivorNum; count++)
 				{
@@ -1087,10 +897,11 @@ void HardTeleMode(int client)
 						fSurvivorPos[2] -= 60.0;
 						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0);
 						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0);
-						if (L4D2_NavAreaBuildPath(nav1, nav2, g_fTeleportDistance + 200.0 , TEAM_INFECTED, false))
+						if (L4D2_NavAreaBuildPath(nav1, nav2, g_fTeleportDistance + 200.0 , TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin && nav1 != nav2)
 						{
 							TeleportEntity(client, fSpawnPos, NULL_VECTOR, NULL_VECTOR);
 							SDKUnhook(client, SDKHook_PostThinkPost, SDK_UpdateThink);
+
 							return;
 						}
 					}
@@ -1099,6 +910,19 @@ void HardTeleMode(int client)
 		}
 	}
 }
+
+stock bool IsAiSmoker(int client)
+{
+	if (client && client <= MaxClients && IsClientInGame(client) && IsPlayerAlive(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_INFECTED && GetEntProp(client, Prop_Send, "m_zombieClass") == 1 && GetEntProp(client, Prop_Send, "m_isGhost") != 1)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 stock bool IsGhost(int client)
 {
     return (IsValidClient(client) && view_as<bool>(GetEntProp(client, Prop_Send, "m_isGhost")));
@@ -1107,32 +931,14 @@ stock bool IsValidClient(int client)
 {
     return (client > 0 && client <= MaxClients && IsClientConnected(client) && IsClientInGame(client));
 }
-//如果有人倒地或者被控且还有刷新机会，立即刷spitter打伤害
-public bool SpitterSpawn(){
-	bool spitter=false;
-	bool pin=false;
-	for(int i=1;i<=MaxClients;i++){
-		if(IsValidSurvivor(i))
-			if(IsPinned(i)||L4D_IsPlayerIncapacitated(i))
-				pin=true;
-		if(IsSpitter(i))
-			spitter=true;
-	}
-	if(!spitter&&pin)
-			return true;
-	return false;
-}
 
 // 返回在场特感数量，根据 z_%s_limit 限制每种特感上限
 int IsBotTypeNeeded()
 {
+	//ResetInfectedNumber();
 	return 6;
 }
 
-stock int GetURandomIntRange(int min, int max)
-{
-	return (GetURandomInt() & (max - min + 1)) + min;
-}
 
 stock void Debug_Print(char[] format, any ...)
 {
@@ -1147,6 +953,3 @@ stock void Debug_Print(char[] format, any ...)
 	}
 	#endif
 }
-
-
-

@@ -86,7 +86,7 @@ public SM_OnModuleStart()
 	SM_iPillPercent = GetConVarInt(SM_hPillPercent);
 	SM_iAdrenPercent = GetConVarInt(SM_hAdrenPercent);
 	
-	RegConsoleCmd("sm_health", SM_Cmd_Health);
+	//RegConsoleCmd("sm_health", SM_Cmd_Health);
 }
 
 public SM_OnModuleEnd()

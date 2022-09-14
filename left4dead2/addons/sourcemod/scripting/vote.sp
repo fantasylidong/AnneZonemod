@@ -9,9 +9,14 @@ public Plugin:myinfo =
 	name = "Vote for run command or cfg file",
 	description = "使用!vote投票执行命令或cfg文件",
 	author = "东",
-	version = "1.0",
+	version = "1.2",
 	url = "https://github.com/fantasylidong/"
 };
+/*
+1.0 版本 初始发布
+1.1 版本 限制旁观使用投票功能
+1.2 版本 旁观不参与投票
+*/
 
 Handle
 	g_hVote,
@@ -19,8 +24,8 @@ Handle
 	g_hCfgsKV;
 
 char
-	g_sCfg[32],
-	g_skickplayername[32];
+	g_sCfg[128],
+	g_skickplayername[128];
 
 
 public OnPluginStart()
@@ -43,11 +48,33 @@ public Action VoteCancle(int client, int args)
 	if (IsBuiltinVoteInProgress())
 	{
 		CancelBuiltinVote();
-		PrintToChatAll("\x03管理员取消了当前投票!");
+		CPrintToChatAll("[{olive}vote{default}] {blue}管理员取消了当前投票!");
 		return Plugin_Handled;
 	}
 	ReplyToCommand(client, "没有投票在进行!");
 	return Plugin_Handled;
+}
+
+// *************************
+// 			生还者
+// *************************
+// 判断是否有效玩家 id，有效返回 true，无效返回 false
+stock bool IsValidClient(int client)
+{
+	if (client > 0 && client <= MaxClients && IsClientConnected(client) && IsClientInGame(client))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+stock bool IsPlayer(int client)
+{
+	int team = GetClientTeam(client);
+	return (team == 2 || team == 3);
 }
 
 public Action VoteRequest(int client, int args)
@@ -56,22 +83,23 @@ public Action VoteRequest(int client, int args)
 	{
 		return Plugin_Handled;
 	}
-	if (IsClientConnected(client) && IsClientInGame(client) &&(GetClientTeam(client) < 2))
+	if (IsValidClient(client) && !IsPlayer(client))
 	{
-		PrintToChat(client, "[\x05vote\x01]\x03旁观者不允许投票执行命令或cfg文件!");
+		CPrintToChat(client, "[{olive}vote{default}] {blue}旁观者不允许投票执行命令或cfg文件!");
+		return Plugin_Handled;
 	}
 	if (args > 0)
 	{
-		char sCfg[64];
+		char sCfg[128];
 		char sBuffer[256];
 		GetCmdArg(1, sCfg, sizeof(sCfg));
-		BuildPath(Path_SM, sBuffer, 256, "../../cfg/%s", sCfg);
+		BuildPath(Path_SM, sBuffer, sizeof(sBuffer), "../../cfg/%s", sCfg);
 		if (DirExists(sBuffer))
 		{
-			FindConfigName(sCfg, sBuffer, 256);
+			FindConfigName(sCfg, sBuffer, sizeof(sBuffer));
 			if (StartVote(client, sBuffer))
 			{
-				strcopy(g_sCfg, 32, sCfg);
+				strcopy(g_sCfg, sizeof(g_sCfg), sCfg);
 				FakeClientCommand(client, "Vote Yes");
 			}
 			return Plugin_Handled;
@@ -118,25 +146,25 @@ public int VoteMenuHandler(Handle menu, MenuAction action, int param1, int param
 {
 	if (action == MenuAction_Select)
 	{
-		char sInfo[64];
-		char sBuffer[64];
+		char sInfo[128];
+		char sBuffer[128];
 		GetMenuItem(menu, param2, sInfo, sizeof(sInfo));
 		KvRewind(g_hCfgsKV);
 		if (KvJumpToKey(g_hCfgsKV, sInfo, false) && KvGotoFirstSubKey(g_hCfgsKV, true))
 		{
 			Handle hMenu = CreateMenu(ConfigsMenuHandler, MENU_ACTIONS_DEFAULT);
-			Format(sBuffer, 64, "选择 %s :", sInfo);
+			Format(sBuffer, sizeof(sBuffer), "选择 %s :", sInfo);
 			SetMenuTitle(hMenu, sBuffer);
 			do {
-				KvGetSectionName(g_hCfgsKV, sInfo, 64);
-				KvGetString(g_hCfgsKV, "message", sBuffer, 64, "");
-				AddMenuItem(hMenu, sInfo, sBuffer, 0);
+				KvGetSectionName(g_hCfgsKV, sInfo,  sizeof(sInfo));
+				KvGetString(g_hCfgsKV, "message", sBuffer, sizeof(sBuffer), "");
+				AddMenuItem(hMenu, sInfo, sBuffer, ITEMDRAW_DEFAULT);
 			} while (KvGotoNextKey(g_hCfgsKV, true));
 			DisplayMenu(hMenu, param1, 20);
 		}
 		else
 		{
-			PrintToChat(param1, "没有相关的文件存在.");
+			CPrintToChat(param1, "[{olive}vote{default}] {red}没有相关的文件存在.");
 			ShowVoteMenu(param1);
 		}
 	}
@@ -151,10 +179,11 @@ public int ConfigsMenuHandler(Handle menu, MenuAction action, int param1, int pa
 {
 	if (action == MenuAction_Select)
 	{
-		char sInfo[64];
-		char sBuffer[64];
-		GetMenuItem(menu, param2, sInfo, sizeof(sInfo));
-		strcopy(g_sCfg, 32, sInfo);
+		char sInfo[128];
+		char sBuffer[128];
+		int style;
+		GetMenuItem(menu, param2, sInfo, sizeof(sInfo), style, sBuffer, sizeof(sBuffer));
+		strcopy(g_sCfg, sizeof(g_sCfg), sInfo);
 		if (!StrEqual(g_sCfg, "sm_votekick", true))
 		{
 			if (StartVote(param1, sBuffer))
@@ -207,11 +236,11 @@ bool StartVote(int client, char[] cfgname)
 		SetBuiltinVoteArgument(g_hVote, sBuffer);
 		SetBuiltinVoteInitiator(g_hVote, client);
 		SetBuiltinVoteResultCallback(g_hVote, VoteResultHandler);
-		DisplayBuiltinVoteToAll(g_hVote, 12);
-		PrintToChatAll("\x03%N 发表了一个投票", client);
+		DisplayBuiltinVoteToAllNonSpectators(g_hVote, 12);
+		CPrintToChatAll("[{olive}vote{default}] {blue}%N 发起了一个投票", client);
 		return true;
 	}
-	PrintToChat(client, "已经有一个投票正在进行.");
+	CPrintToChat(client, "[{olive}vote{default}] {red}已经有一个投票正在进行.");
 	return false;
 }
 
@@ -270,19 +299,19 @@ public Action KickRequest(int client, int args)
 void CreateVotekickMenu(client)
 {
 	Handle menu = CreateMenu(Menu_Voteskick, MENU_ACTIONS_DEFAULT);
-	char name[32];
-	char info[40];
-	char playerid[32];
+	char name[126];
+	char info[128];
+	char playerid[128];
 	SetMenuTitle(menu, "选择踢出玩家");
 	int i = 1;
 	while (i <= MaxClients)
 	{
 		if (IsClientInGame(i) && !IsFakeClient(i))
 		{
-			Format(playerid, 32, "%i", GetClientUserId(i));
-			if (GetClientName(i, name, 32))
+			Format(playerid, sizeof(playerid), "%i", GetClientUserId(i));
+			if (GetClientName(i, name, sizeof(name)))
 			{
-				Format(info, 38, "%s", name);
+				Format(info, sizeof(info), "%s", name);
 				AddMenuItem(menu, playerid, info, ITEMDRAW_DEFAULT);
 			}
 		}
@@ -295,10 +324,10 @@ public int Menu_Voteskick(Handle menu, MenuAction action, int param1, int param2
 {
 	if (action == MenuAction_Select)
 	{
-		char name[32];
+		char name[128];
 		GetMenuItem(menu, param2, name, sizeof(name));
 		g_skickplayername = name;
-		PrintToChatAll("\x04%N 发起投票踢出 \x05 %s", param1, g_skickplayername);
+		CPrintToChatAll("[{olive}vote{default}] {blue}%N {default}发起投票踢出 {blue} %s", param1, g_skickplayername);
 		if (DisplayVoteKickMenu(param1))
 		{
 			FakeClientCommand(param1, "Vote Yes");
@@ -326,16 +355,16 @@ public bool DisplayVoteKickMenu(client)
 			}
 			i++;
 		}
-		char sBuffer[64];
+		char sBuffer[128];
 		g_hVoteKick = CreateBuiltinVote(VoteActionHandler, BuiltinVoteType_Custom_YesNo, BUILTINVOTE_ACTIONS_DEFAULT);
-		Format(sBuffer, 64, "踢出 '%s' ?", g_skickplayername);
+		Format(sBuffer, 128, "踢出 '%s' ?", g_skickplayername);
 		SetBuiltinVoteArgument(g_hVoteKick, sBuffer);
 		SetBuiltinVoteInitiator(g_hVoteKick, client);
 		SetBuiltinVoteResultCallback(g_hVoteKick, VoteResultHandler);
-		DisplayBuiltinVoteToAll(g_hVoteKick, 10);
-		PrintToChatAll("\x03%N 发表了一个投票", client);
+		DisplayBuiltinVoteToAllNonSpectators(g_hVoteKick, 10);
+		CPrintToChatAll("[{olive}vote{default}] {blue}%N 发起了一个投票", client);
 		return true;
 	}
-	PrintToChat(client, "已经有一个投票正在进行.");
+	CPrintToChat(client, "[{olive}vote{default}] {red}已经有一个投票正在进行.");
 	return false;
 }

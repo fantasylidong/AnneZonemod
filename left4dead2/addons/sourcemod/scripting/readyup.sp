@@ -361,21 +361,21 @@ public void PlayerTeam_Event(Event event, const char[] name, bool dontBroadcast)
 	
 	
 	
-	/*
+	
 	//切换队伍
 	if(isTeamReadyMode && IsClientConnected(client) && PlayerTeam(team)){
-		if(oldteam==2 || oldteam == 3)
-			UnReadyByTeam(oldteam);
+		isPlayerReady[client] = false;
 		if(team==2 || team == 3)
 			UnReadyByTeam(team);
-		CancelFullReady(client,teamShuffle);
+		if(inLiveCountdown)
+			CancelFullReady(client,teamShuffle);
 	}
-	*/
+	
 	if(isTeamReadyMode && IsClientConnected(client) && IsClientInGame(client))
 	{
 		if(PlayerTeam(team))
 		{
-			if(IsReadyTeam(team))
+			if(IsReadyTeam(client))
 				Ready_Cmd(client,0);
 			else
 				isPlayerReady[client] = false;
@@ -624,7 +624,7 @@ public Action Vote_Callback(int client, const char[] command, int argc)
 }
 public void UnReadyByTeam(int team){
 	for(int i=1; i<= MaxClients ; i++){
-		if(IsClientConnected(i) && !IsFakeClient(i) && IsPlayer(i) && GetClientTeam(i)== team){
+		if(IsClientConnected(i) && IsClientInGame(i) && !IsFakeClient(i) && IsPlayer(i) && GetClientTeam(i)== team){
 			isPlayerReady[i] = false;
 			//CancelFullReady(i,teamShuffle);
 		}		

@@ -28,7 +28,7 @@ public Plugin myinfo =
 	name 			= "Direct InfectedSpawn",
 	author 			= "Caibiii, 夜羽真白，东",
 	description 	= "特感刷新控制，传送落后特感",
-	version 		= "2022.07.1",
+	version 		= "2022.08.14",
 	url 			= "https://github.com/Caibiii/AnneServer"
 }
 
@@ -62,8 +62,8 @@ ArrayList aThreadHandle;
 public void OnPluginStart()
 {
 	// CreateConVar
-	g_hSpawnDistanceMin = CreateConVar("inf_SpawnDistanceMin_alone", "500.0", "特感复活离生还者最近的距离限制", CVAR_FLAG, true, 0.0);
-	g_hSpawnDistanceMax = CreateConVar("inf_SpawnDistanceMax_alone", "500.0", "特感复活离生还者最远的距离限制", CVAR_FLAG, true, g_hSpawnDistanceMin.FloatValue);
+	g_hSpawnDistanceMin = CreateConVar("inf_SpawnDistanceMin", "600.0", "特感复活离生还者最近的距离限制", CVAR_FLAG, true, 0.0);
+	g_hSpawnDistanceMax = CreateConVar("inf_SpawnDistanceMax", "600.0", "特感复活离生还者最远的距离限制", CVAR_FLAG, true, g_hSpawnDistanceMin.FloatValue);
 	g_hTeleportSi = CreateConVar("inf_TeleportSi", "1", "是否开启特感距离生还者一定距离将其传送至生还者周围", CVAR_FLAG, true, 0.0, true, 1.0);
 	g_hTeleportDistance = CreateConVar("inf_TeleportDistance", "800.0", "特感落后于最近的生还者超过这个距离则将它们传送", CVAR_FLAG, true, 0.0);
 	g_hSiLimit = CreateConVar("l4d_infected_limit", "6", "一次刷出多少特感", CVAR_FLAG, true, 0.0);
@@ -249,12 +249,12 @@ public void OnGameFrame()
 				g_fSpawnDistanceMax += 5.0;
 				if(g_fSpawnDistanceMax < 500.0)
 				{
-					dist = 850.0;
+					dist = 800.0;
 					fMaxs[2] = fSurvivorPos[2] + 500.0;
 				}
 				else
 				{
-					dist = 350.0 + g_fSpawnDistanceMax;
+					dist = 300.0 + g_fSpawnDistanceMax;
 					fMaxs[2] = fSurvivorPos[2] + g_fSpawnDistanceMax;
 				}
 				fMins[0] = fSurvivorPos[0] - g_fSpawnDistanceMax;
@@ -316,7 +316,7 @@ public void OnGameFrame()
 						fSurvivorPos[2] -= 60.0;
 						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0, false, false, false, 3);
 						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0, false, false, false, 2);
-						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin)
+						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin && nav1 != nav2)
 						{
 							int iZombieClass = IsBotTypeNeeded();
 							if (iZombieClass > 0&&g_iSpawnMaxCount > 0)
@@ -633,7 +633,7 @@ bool PlayerVisibleTo(float targetposition[3])
 		if (IsClientConnected(client) && IsClientInGame(client) && IsValidSurvivor(client) && IsPlayerAlive(client))
 		{
 			GetClientEyePosition(client, position);
-			position[0] += 20;
+			position[0] += 30;
 			if(GetVectorDistance(targetposition, position) < g_fSpawnDistanceMin)
 			{
 				return true;
@@ -675,7 +675,7 @@ bool PlayerVisibleTo(float targetposition[3])
 			}
 			delete trace;
 			GetClientEyePosition(client, position);
-			position[0] -= 20;
+			position[0] -= 30;
 			if(GetVectorDistance(targetposition, position) < g_fSpawnDistanceMin)
 			{
 				return true;
@@ -977,7 +977,7 @@ void HardTeleMode(int client)
 						fSurvivorPos[2] -= 60.0;
 						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0);
 						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0);
-						if (L4D2_NavAreaBuildPath(nav1, nav2, g_fTeleportDistance + 200.0 , TEAM_INFECTED, false))
+						if (L4D2_NavAreaBuildPath(nav1, nav2, g_fTeleportDistance + 200.0 , TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin && nav1 != nav2)
 						{
 							TeleportEntity(client, fSpawnPos, NULL_VECTOR, NULL_VECTOR);
 							SDKUnhook(client, SDKHook_PostThinkPost, SDK_UpdateThink);

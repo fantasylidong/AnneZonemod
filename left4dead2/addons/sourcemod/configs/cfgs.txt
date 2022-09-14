@@ -21,6 +21,10 @@
 		{
 			"message" "最新版本"
 		}
+		"exec vote/Anne/Anne22-7.cfg"
+		{
+			"message" "22-7月版本"
+		}
 		"exec vote/Anne/Anne22-6.cfg"
 		{
 			"message" "22-6月版本"
@@ -243,31 +247,47 @@
 			"message" "20秒"
 		}
 	}
-	"杂项"
+	"特感最低生成距离"
 	{
-		"exec vote/hard_on.cfg"
+		"exec vote/mindist/250.cfg"
 		{
-			"message" "开启特感属性增强"
+			"message" "250单位"
 		}
-		"exec vote/hard_off.cfg"
+		"exec vote/mindist/300.cfg"
 		{
-			"message" "关闭特感属性增强"
+			"message" "300单位"
 		}
-		"sm_cvar sb_fix_enabled 1"
+		"exec vote/mindist/350.cfg"
 		{
-			"message" "开启高级人机"
+			"message" "350单位"
 		}
-		"sm_cvar sb_fix_enabled 0"
+		"exec vote/mindist/400.cfg"
 		{
-			"message" "关闭高级人机"
+			"message" "400单位"
 		}
-		"exec vote/tank_on.cfg"
+		"exec vote/mindist/450.cfg"
 		{
-			"message" "开启Tank大致血量显示"
+			"message" "450单位"
 		}
-		"exec vote/tank_off.cfg"
+		"exec vote/mindist/500.cfg"
 		{
-			"message" "关闭Tank大致血量显示"
+			"message" "500单位"
+		}
+		"exec vote/mindist/550.cfg"
+		{
+			"message" "550单位"
+		}
+		"exec vote/mindist/600.cfg"
+		{
+			"message" "600单位"
+		}
+		"exec vote/mindist/650.cfg"
+		{
+			"message" "650单位"
+		}
+		"exec vote/mindist/700.cfg"
+		{
+			"message" "700单位"
 		}
 	}
 	"模式选择"
@@ -293,7 +313,42 @@
 			"message" "牛牛冲刺大逃亡"
 		}
 	}
-	"开关回血"
+	"杂项"
+	{
+		"exec vote/hard_on.cfg"
+		{
+			"message" "开启特感属性增强"
+		}
+		"exec vote/hard_off.cfg"
+		{
+			"message" "关闭特感属性增强"
+		}
+		"sm_cvar sb_fix_enabled 1"
+		{
+			"message" "开启高级人机"
+		}
+		"sm_cvar sb_fix_enabled 0"
+		{
+			"message" "关闭高级人机"
+		}
+		"exec vote/mysqlShop_on.cfg"
+		{
+			"message" "开启Anne老版数据库商店"
+		}
+		"exec vote/mysqlShop_off.cfg"
+		{
+			"message" "开启电信服数据库版商店"
+		}
+		"exec vote/tank_on.cfg"
+		{
+			"message" "开启Tank大致血量显示"
+		}
+		"exec vote/tank_off.cfg"
+		{
+			"message" "关闭Tank大致血量显示"
+		}
+	}
+	"商店选项开关"
 	{
 		"sm_cvar ReturnBlood 1"
 		{
@@ -302,6 +357,14 @@
 		"sm_cvar ReturnBlood 0"
 		{
 			"message" "关闭回血"
+		}
+		"sm_cvar rpg_allow_biggun 1"
+		{
+			"message" "开启大枪购买"
+		}
+		"sm_cvar rpg_allow_biggun 0"
+		{
+			"message" "关闭大枪购买"
 		}
 	}
 	"开关Mod"
