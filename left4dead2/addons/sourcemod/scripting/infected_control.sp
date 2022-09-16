@@ -290,8 +290,8 @@ public void OnGameFrame()
 						GetClientEyePosition(index, fSurvivorPos);
 						fSurvivorPos[2] -= 60.0;
 						//获取nav地址
-						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0, false, false, false, 3);
-						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0, false, false, false, 2);
+						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 120.0, false, false, false, 3);
+						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 120.0, false, false, false, 2);
 						//nav1 和 nav2 必须有网格相连的路，并且生成距离大于g_fSpawnDistanceMin，增加不能是通nav网格的要求
 						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin && nav1 != nav2)
 						{
@@ -908,8 +908,8 @@ void HardTeleMode(int client)
 					{
 						GetClientEyePosition(index, fSurvivorPos);
 						fSurvivorPos[2] -= 60.0;
-						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0);
-						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0);
+						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 120.0);
+						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 120.0);
 						if (L4D2_NavAreaBuildPath(nav1, nav2, g_fTeleportDistance + 200.0 , TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin && nav1 != nav2)
 						{
 							TeleportEntity(client, fSpawnPos, NULL_VECTOR, NULL_VECTOR);

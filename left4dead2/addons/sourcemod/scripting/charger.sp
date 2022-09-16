@@ -289,8 +289,8 @@ public void OnGameFrame()
 							continue;					
 						GetClientEyePosition(index, fSurvivorPos);
 						fSurvivorPos[2] -= 60.0;
-						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 300.0, false, false, false, 3);
-						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 300.0, false, false, false, 2);
+						Address nav1 = L4D_GetNearestNavArea(fSpawnPos, 120.0, false, false, false, 3);
+						Address nav2 = L4D_GetNearestNavArea(fSurvivorPos, 120.0, false, false, false, 2);
 						if (L4D2_NavAreaBuildPath(nav1, nav2, dist, TEAM_INFECTED, false) && GetVectorDistance(fSurvivorPos, fSpawnPos) >= g_fSpawnDistanceMin && nav1 != nav2)
 						{
 							int iZombieClass = IsBotTypeNeeded();

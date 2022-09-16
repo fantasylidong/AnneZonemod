@@ -61,6 +61,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 {
 	if (IsCharger(client) && IsPlayerAlive(client))
 	{
+		if(GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
+			return Plugin_Continue;
 		bool has_sight = view_as<bool>(GetEntProp(client, Prop_Send, "m_hasVisibleThreats"));
 		int target = GetClientAimTarget(client, true), flags = GetEntityFlags(client), closet_survivor_distance = GetClosetSurvivorDistance(client), ability = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 		float self_pos[3] = {0.0}, target_pos[3] = {0.0}, vec_speed[3] = {0.0}, vel_buffer[3] = {0.0}, cur_speed = 0.0;
@@ -165,8 +167,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			buttons |= IN_ATTACK2;
 		}
 		// 连跳，并阻止冲锋，可以攻击被控的人的时，将最小距离置 0，连跳追上被控的人
-		//int min_dist = can_attack_pinned[client] ? 0 : g_hChargeDist.IntValue;
-		if (has_sight && g_hAllowBhop.BoolValue && cur_speed > 175.0 && IsValidSurvivor(target))
+		int min_dist = can_attack_pinned[client] ? 60 : g_hChargeDist.IntValue;
+		if (has_sight && g_hAllowBhop.BoolValue && min_dist < closet_survivor_distance < 10000 && cur_speed > 175.0 && IsValidSurvivor(target))
 		{
 			if (flags & FL_ONGROUND)
 			{
@@ -195,6 +197,8 @@ public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
 	int new_target = 0;
 	if (IsCharger(specialInfected))
 	{
+		if(GetEntPropEnt(specialInfected, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(specialInfected, Prop_Send, "m_carryVictim") > 0)
+			return Plugin_Continue;
 		float self_pos[3] = {0.0}, target_pos[3] = {0.0}, min_dist = 0.0, max_dist = 0.0;
 		GetClientEyePosition(specialInfected, self_pos);
 		// 获取在冲锋范围内的目标，从 Cvar 中获取最下与最大范围

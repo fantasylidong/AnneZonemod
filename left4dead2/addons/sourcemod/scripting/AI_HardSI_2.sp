@@ -236,16 +236,39 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		{
 			react = OnTankRunCmd(client, buttons, vel, angles);
 		}
-
+		else if (g_bAiEnable[client])
+		{
+			switch (zombieclass)
+			{
+				case ZC_HUNTER:
+				{
+					react = OnHunterRunCmd(client, buttons, vel, angles);
+				}
+			}
+		}
 		return react;
 	}
 	return Plugin_Continue;
 }
 
+#define DOOR_ATTACK_SPEED 50
 
+public Action OnHunterRunCmd(int client, int &buttons, float vel[3], float angles[3])
+{
+	Action react = Plugin_Continue;
+	if (GetCurrentSpeed(client) <= DOOR_ATTACK_SPEED)
+	{
+		DoorAttack(client, buttons, ZC_HUNTER);
+	}
+	return react;
+}
 
 public Action OnTankRunCmd(int client, int &buttons, float vel[3], float angles[3])
 {
+	if (GetCurrentSpeed(client) <= DOOR_ATTACK_SPEED)
+	{
+		DoorAttack(client, buttons, ZC_TANK);
+	}
 	if (GetEntityMoveType(client) != MOVETYPE_LADDER)
 	{
 		float tankattackrange = -1.0, tankspeed = -1.0;
@@ -744,6 +767,65 @@ bool IsPinned(int client)
 }
 
 bool traceFilter(int entity, int mask, int self)
+{
+	return entity != self;
+}
+
+
+
+// 特感挠门
+float GetCurrentSpeed(int client)
+{
+	float vecspeed[3] = {0.0}, curspeed = 0.0;
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vecspeed);
+	curspeed = SquareRoot(Pow(vecspeed[0], 2.0) + Pow(vecspeed[1], 2.0));
+	return curspeed;
+}
+
+public Action DoorAttack(int client, int &buttons, int infectedClass)
+{
+	int target = GetNearestSurvivor(client);
+	if (IsValidSurvivor(target))
+	{
+		char className[32] = {'\0'};
+		float eyePos[3] = {0.0}, targetPos[3] = {0.0}, mins[3] = {0.0}, maxs[3] = {0.0};
+		GetClientAbsOrigin(client, eyePos);
+		GetClientAbsOrigin(target, targetPos);
+		GetClientMins(client, mins);
+		GetClientMaxs(client, maxs);
+		mins[2] += 15.0;
+		Handle hTrace = TR_TraceHullFilterEx(eyePos, targetPos, mins, maxs, MASK_VISIBLE, TR_RayFilter, client);
+		if (TR_DidHit(hTrace))
+		{
+			// 射线撞击，获取实体名称
+			int entIndex = TR_GetEntityIndex(hTrace);
+			if (IsValidEntity(entIndex) && IsValidEdict(entIndex))
+			{
+				GetEdictClassname(entIndex, className, sizeof(className));
+			}
+			if (className[0] != '\0' && strcmp(className, "prop_door_rotating") == 0 || strcmp(className, "infected") == 0 || strcmp(className, "witch") == 0)
+			{
+				delete hTrace;
+				switch (infectedClass)
+				{
+					case view_as<int>(ZC_TANK):
+					{
+						buttons &= IN_ATTACK;
+						return Plugin_Changed;
+					}
+					case view_as<int>(ZC_HUNTER):
+					{
+						buttons &= IN_ATTACK2;
+						return Plugin_Changed;
+					}
+				}
+			}
+		}
+		delete hTrace;
+	}
+	return Plugin_Continue;
+}
+stock bool TR_RayFilter(int entity, int mask, int self)
 {
 	return entity != self;
 }

@@ -1488,13 +1488,13 @@ Action CmdHat(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if( g_iCvarMenu != 0 && !l4dstats_IsTopPlayer(client,50) )
+	if( g_iCvarMenu != 0 && !l4dstats_IsTopPlayer(client,100) )
 	{
 		int flags = GetUserFlagBits(client);
 
 		if( !(flags & ADMFLAG_ROOT) && !(flags & g_iCvarMenu) )
 		{
-			CPrintToChat(client, "{GREEN}[HAT]{DEFAULT}你还没有权限使用帽子，请确认你是否为{ORANGE}管理员或积分排名榜前50名玩家");
+			CPrintToChat(client, "{GREEN}[HAT]{DEFAULT}你还没有权限使用帽子，请确认你是否为{ORANGE}管理员或积分排名榜前100名玩家");
 			return Plugin_Handled;
 		}
 	}
