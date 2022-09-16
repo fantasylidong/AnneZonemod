@@ -117,7 +117,8 @@ public CvarTankBhop( Handle:cvar, const String:oldValue[], const String:newValue
 
 public CvarPluginVersion( Handle:cvar, const String:oldValue[], const String:newValue[] ) 
 {
-	strcopy(PLUGIN_VERSION, sizeof(PLUGIN_VERSION), newValue);
+	Format(PLUGIN_VERSION, sizeof(PLUGIN_VERSION), "%s", newValue);
+	//strcopy(PLUGIN_VERSION, sizeof(PLUGIN_VERSION), newValue);
 }
 
 
@@ -154,6 +155,22 @@ public void OnGameFrame(){
 public Action:InfectedStatus(Client, args)
 { 
 	//FormatTime(sBuffer, sizeof(sBuffer), "%Y/%m/%d");
+	char buffer[128];
+	char buffer2[128];
+	Format(buffer, sizeof(buffer), "\x03Tank连跳\x05[\x04%s\x05]", TankBhop > 0?"开启":"关闭");
+	Format(buffer, sizeof(buffer), "%s \x03武器\x05[\x04%s\x05]", buffer, Weapon > 0?(Weapon > 1?"Anne+":"Zone"):"Anne");
+	if(PLUGIN_VERSION[0] == '\0')
+		GetConVarString(g_hCvarPluginVersion, PLUGIN_VERSION, sizeof(PLUGIN_VERSION));
+	Format(buffer, sizeof(buffer), "%s \x03特感\x05[\x04%i特%i秒\x05] \x03电信服\x05[\x04%s\x05]", buffer, CommonLimit, CommonTime, PLUGIN_VERSION);
+	int max_dist = GetConVarInt(FindConVar("inf_SpawnDistanceMin"));
+	Format(buffer2, sizeof(buffer2), "\x03特感最近生成距离\x05[\x04%d\x05]", max_dist);
+	if(GetConVarInt(FindConVar("ReturnBlood"))>0)
+		Format(buffer2, sizeof(buffer2), "%s \x03回血\x05[\x04开启\x05]", buffer2);
+	if(GetConVarInt(FindConVar("ai_TankConsume"))>0)
+		Format(buffer2, sizeof(buffer2), "%s \x03坦克消耗\x05[\x04开启\x05]");
+	PrintToChatAll(buffer);
+	PrintToChatAll(buffer2);
+	/*
 	if(TankBhop > 0)
 	{
 		if( Weapon == 1)
@@ -184,15 +201,34 @@ public Action:InfectedStatus(Client, args)
 			PrintToChatAll("\x03Tank连跳\x05[\x04开启\x05] \x03武器\x05[\x04Anne+\x05] \x03特感\x05[\x04%i特%i秒\x05] \x03电信服\x05[\x04%s\x05]",CommonLimit,CommonTime,PLUGIN_VERSION);
 		}
 	}
+	int max_dist = GetConVarInt(FindConVar("inf_SpawnDistanceMin"));
+	PrintToChatAll("\x03特感最近生成距离\x05[\x04%d\x05]", max_dist);
 	if(GetConVarInt(FindConVar("ReturnBlood"))>0)
 		PrintToChatAll("\x03回血\x05[\x04开启\x05]");
 	if(GetConVarInt(FindConVar("ai_TankConsume"))>0)
 			PrintToChatAll("\x03坦克消耗\x05[\x04开启\x05]");
+	*/
 	return Plugin_Handled;
 }
 public event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	//FormatTime(sBuffer, sizeof(sBuffer), "%Y/%m/%d");
+	char buffer[128];
+	char buffer2[128];
+	Format(buffer, sizeof(buffer), "\x03Tank连跳\x05[\x04%s\x05]", TankBhop > 0?"开启":"关闭");
+	Format(buffer, sizeof(buffer), "%s \x03武器\x05[\x04%s\x05]", buffer, Weapon > 0?(Weapon > 1?"Anne+":"Zone"):"Anne");
+	if(PLUGIN_VERSION[0] == '\0')
+		GetConVarString(g_hCvarPluginVersion, PLUGIN_VERSION, sizeof(PLUGIN_VERSION));
+	Format(buffer, sizeof(buffer), "%s \x03特感\x05[\x04%i特%i秒\x05] \x03电信服\x05[\x04%s\x05]", buffer, CommonLimit, CommonTime, PLUGIN_VERSION);
+	int max_dist = GetConVarInt(FindConVar("inf_SpawnDistanceMin"));
+	Format(buffer2, sizeof(buffer2), "\x03特感最近生成距离\x05[\x04%d\x05]", max_dist);
+	if(GetConVarInt(FindConVar("ReturnBlood"))>0)
+		Format(buffer2, sizeof(buffer2), "%s \x03回血\x05[\x04开启\x05]", buffer2);
+	if(GetConVarInt(FindConVar("ai_TankConsume"))>0)
+		Format(buffer2, sizeof(buffer2), "%s \x03坦克消耗\x05[\x04开启\x05]");
+	PrintToChatAll(buffer);
+	PrintToChatAll(buffer2);
+	/*
 	if(TankBhop > 0)
 	{
 		if( Weapon == 1)
@@ -223,10 +259,13 @@ public event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 			PrintToChatAll("\x03Tank连跳\x05[\x04开启\x05] \x03武器\x05[\x04Anne+\x05] \x03特感\x05[\x04%i特%i秒\x05] \x03电信服\x05[\x04%s\x05]",CommonLimit,CommonTime,PLUGIN_VERSION);
 		}
 	}
+	
+	PrintToChatAll("\x03特感最近生成距离\x05[\x04%d\x05]", max_dist);
 	if(GetConVarInt(FindConVar("ReturnBlood"))>0)
 		PrintToChatAll("\x03回血\x05[\x04开启\x05]");
 	if(GetConVarInt(FindConVar("ai_TankConsume"))>0)
 		PrintToChatAll("\x03坦克消耗\x05[\x04开启\x05]");
+	*/
 }
 public OnClientPutInServer(Client)
 {
@@ -239,6 +278,22 @@ public OnClientPutInServer(Client)
 			L4D_LobbyUnreserve();
 			ServerCommand("sm_cvar sv_allow_lobby_connect_only 0");
 		}
+		char buffer[128];
+		char buffer2[128];
+		Format(buffer, sizeof(buffer), "\x03Tank连跳\x05[\x04%s\x05]", TankBhop > 0?"开启":"关闭");
+		Format(buffer, sizeof(buffer), "%s \x03武器\x05[\x04%s\x05]", buffer, Weapon > 0?(Weapon > 1?"Anne+":"Zone"):"Anne");
+		if(PLUGIN_VERSION[0] == '\0')
+		GetConVarString(g_hCvarPluginVersion, PLUGIN_VERSION, sizeof(PLUGIN_VERSION));
+		Format(buffer, sizeof(buffer), "%s \x03特感\x05[\x04%i特%i秒\x05] \x03电信服\x05[\x04%s\x05]", buffer, CommonLimit, CommonTime, PLUGIN_VERSION);
+		int max_dist = GetConVarInt(FindConVar("inf_SpawnDistanceMin"));
+		Format(buffer2, sizeof(buffer2), "\x03特感最近生成距离\x05[\x04%d\x05]", max_dist);
+		if(GetConVarInt(FindConVar("ReturnBlood"))>0)
+			Format(buffer2, sizeof(buffer2), "%s \x03回血\x05[\x04开启\x05]", buffer2);
+		if(GetConVarInt(FindConVar("ai_TankConsume"))>0)
+			Format(buffer2, sizeof(buffer2), "%s \x03坦克消耗\x05[\x04开启\x05]");
+		PrintToChat(Client, buffer);
+		PrintToChat(Client, buffer2);
+		/*
 		if(TankBhop > 0)
 		{
 			if( Weapon == 1)
@@ -273,6 +328,7 @@ public OnClientPutInServer(Client)
 			PrintToChatAll("\x03回血\x05[\x04开启\x05]");
 		if(GetConVarInt(FindConVar("ai_TankConsume"))>0)
 			PrintToChatAll("\x03坦克消耗\x05[\x04开启\x05]");
+			*/
 	}
 }
 stock bool:IsValidPlayer(Client, bool:AllowBot = true, bool:AllowDeath = true)

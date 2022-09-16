@@ -1379,7 +1379,7 @@ void GetHUD1_Text(char[] output, int size)
    	FormatEx(output, size, "\0");
 	int boss_proximity = RoundToNearest(GetBossProximity() * 100.0);
 	int g_fWitchPercent, g_fTankPercent;
-	int max_dist = GetConVarInt(FindConVar("inf_SpawnDistanceMin"));
+	//int max_dist = GetConVarInt(FindConVar("inf_SpawnDistanceMin"));
 	if(!IsStaticWitch)
 	{
 		g_fWitchPercent = RoundToNearest(GetWitchFlow(0) * 100.0);
@@ -1400,20 +1400,20 @@ void GetHUD1_Text(char[] output, int size)
 	{
 		if(g_fWitchPercent)
 		{
-			FormatEx(output, size, "当前: [ %d ] 坦克: [ %d ] 女巫: [ %d ] 特感距离: [ %d ]", boss_proximity, g_fTankPercent, g_fWitchPercent, max_dist);
+			FormatEx(output, size, "当前: [ %d ] 坦克: [ %d ] 女巫: [ %d ]", boss_proximity, g_fTankPercent, g_fWitchPercent);
 		}
 		else
 		{
-			FormatEx(output, size, "当前: [ %d ] 坦克: [ %d ] 女巫: [ Static ] 特感距离: [ %d ]", boss_proximity, g_fTankPercent, max_dist);
+			FormatEx(output, size, "当前: [ %d ] 坦克: [ %d ] 女巫: [ Static ]", boss_proximity, g_fTankPercent);
 		}
 	} 
 	else if(g_fWitchPercent)
 	{
-		FormatEx(output, size, "当前: [ %d ] 坦克: [ Static ] 女巫: [ %d ] 特感距离: [ %d ]", boss_proximity, g_fWitchPercent, max_dist);
+		FormatEx(output, size, "当前: [ %d ] 坦克: [ Static ] 女巫: [ %d ]", boss_proximity, g_fWitchPercent);
 	}
 	else
 	{
-		FormatEx(output, size, "当前: [ %d ] 坦克: [ Static ] 女巫: [ Static ] 特感距离: [ %d ]", boss_proximity, max_dist);
+		FormatEx(output, size, "当前: [ %d ] 坦克: [ Static ] 女巫: [ Static ]", boss_proximity);
 	}
 }
 

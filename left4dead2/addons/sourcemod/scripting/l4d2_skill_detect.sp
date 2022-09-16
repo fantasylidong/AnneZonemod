@@ -82,7 +82,7 @@
 #define CHARGE_END_CHECK        2.5     // after client hits ground after getting impact-charged: when to check whether it was a death
 #define CHARGE_END_RECHECK      3.0     // safeguard wait to recheck on someone getting incapped out of bounds
 #define VOMIT_DURATION_TIME     2.25    // how long the boomer vomit stream lasts -- when to check for boom count
-#define ROCK_CHECK_TIME         0.34    // how long to wait after rock entity is destroyed before checking for skeet/eat (high to avoid lag issues)
+#define ROCK_CHECK_TIME         0.1    // how long to wait after rock entity is destroyed before checking for skeet/eat (high to avoid lag issues)
 #define CARALARM_MIN_TIME       0.11    // maximum time after touch/shot => alarm to connect the two events (test this for LAG)
 
 #define WITCH_CHECK_TIME        0.1     // time to wait before checking for witch crown after shoots fired
@@ -2953,7 +2953,7 @@ stock HandleBHopStreak( survivor, streak, Float: maxVelocity )
             IS_VALID_INGAME(survivor) && !IsFakeClient(survivor) &&
             streak >= GetConVarInt(g_hCvarBHopMinStreak)
     ) {
-        CPrintToChat(survivor, "{green}★ {olive}你 {default}成功一次性完成 {blue}%i 连跳 {default}({blue}最高速度: {olive}%.1f{default})",
+        CPrintToChat(survivor, "{green}★ {olive}你 {default}成功一次性完成 {blue}%i 连跳 {default}({blue}最高速度: {olive}%.1f{default})", streak,
                 maxVelocity
             );
     }
