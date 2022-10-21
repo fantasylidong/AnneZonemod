@@ -1,3 +1,5 @@
+# 此项目已archieve，不再维护，有需要的请使用 https://github.com/fantasylidong/CompetitiveWithAnne
+
 # AnneZonemod
 
 > 使用了Zonemod改图的Anne插件包，所有对抗插件都已更新到最新版本，Anne核心和原test分支，和电信服保持一致
